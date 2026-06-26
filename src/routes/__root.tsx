@@ -16,7 +16,10 @@ function NotFoundComponent() {
       <div className="max-w-md text-center">
         <h1 className="text-7xl font-serif text-gold">404</h1>
         <p className="mt-4 text-sm tracking-luxe uppercase text-muted-foreground">Page not found</p>
-        <Link to="/" className="mt-8 inline-block text-xs tracking-luxe uppercase border-b border-gold pb-1">
+        <Link
+          to="/"
+          className="mt-8 inline-block text-xs tracking-luxe uppercase border-b border-gold pb-1"
+        >
           Return Home
         </Link>
       </div>
@@ -32,7 +35,10 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
       <div className="max-w-md text-center">
         <h1 className="text-2xl font-serif text-gold">Something went wrong</h1>
         <button
-          onClick={() => { router.invalidate(); reset(); }}
+          onClick={() => {
+            router.invalidate();
+            reset();
+          }}
           className="mt-6 text-xs tracking-luxe uppercase border-b border-gold pb-1"
         >
           Try again
@@ -48,13 +54,20 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
       { title: "Veylor — The Shazam of Fashion" },
-      { name: "description", content: "Veylor is the AI fashion intelligence platform. Upload any outfit, discover the look — across luxury, premium, and affordable tiers." },
+      {
+        name: "description",
+        content:
+          "Veylor is the AI fashion intelligence platform. Upload any outfit, discover the look — across luxury, premium, and affordable tiers.",
+      },
     ],
     links: [
       { rel: "stylesheet", href: appCss },
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
-      { rel: "stylesheet", href: "https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500&family=Inter:wght@300;400;500;600&display=swap" },
+      {
+        rel: "stylesheet",
+        href: "https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500&family=Inter:wght@300;400;500;600&display=swap",
+      },
     ],
   }),
   shellComponent: RootShell,
@@ -66,8 +79,13 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 function RootShell({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <head><HeadContent /></head>
-      <body>{children}<Scripts /></body>
+      <head>
+        <HeadContent />
+      </head>
+      <body>
+        {children}
+        <Scripts />
+      </body>
     </html>
   );
 }
