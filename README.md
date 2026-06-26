@@ -3,7 +3,7 @@
 **Veylor is the Shazam of fashion.**
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/bboymain/veylor/refs/heads/main/2026-06-26%2015_43_15-.png" alt="Veylor homepage showing the local fashion scanner" width="100%" />
+  <img src="./2026-06-26%2015_43_15-.png" alt="Veylor homepage showing the local fashion scanner" width="100%" />
 </p>
 
 Upload a photo of an outfit, paste an image link, or scan a look to identify the clothing and accessories being worn. Veylor is designed to help users discover exact products when possible, then find visually similar alternatives across luxury, premium, and affordable price ranges.
