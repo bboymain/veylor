@@ -19,11 +19,46 @@ const NAV = [
 ];
 
 const DETECTED = [
-  { id: "jacket", type: "Outerwear", desc: "Oversized wool overcoat, charcoal", brand: "The Row · Darryl", confidence: 96, img: itemJacket },
-  { id: "top", type: "Knitwear", desc: "Ribbed cashmere turtleneck, cream", brand: "Loro Piana · Dolcevita", confidence: 92, img: itemTop },
-  { id: "pants", type: "Trousers", desc: "Tapered pleated wool, black", brand: "Lemaire · Carrot", confidence: 89, img: itemPants },
-  { id: "shoes", type: "Footwear", desc: "Polished leather chelsea boot", brand: "Bottega Veneta", confidence: 94, img: itemShoes },
-  { id: "watch", type: "Accessory", desc: "Slim gold dress watch, leather strap", brand: "Cartier · Tank", confidence: 87, img: itemWatch },
+  {
+    id: "jacket",
+    type: "Outerwear",
+    desc: "Oversized wool overcoat, charcoal",
+    brand: "The Row · Darryl",
+    confidence: 96,
+    img: itemJacket,
+  },
+  {
+    id: "top",
+    type: "Knitwear",
+    desc: "Ribbed cashmere turtleneck, cream",
+    brand: "Loro Piana · Dolcevita",
+    confidence: 92,
+    img: itemTop,
+  },
+  {
+    id: "pants",
+    type: "Trousers",
+    desc: "Tapered pleated wool, black",
+    brand: "Lemaire · Carrot",
+    confidence: 89,
+    img: itemPants,
+  },
+  {
+    id: "shoes",
+    type: "Footwear",
+    desc: "Polished leather chelsea boot",
+    brand: "Bottega Veneta",
+    confidence: 94,
+    img: itemShoes,
+  },
+  {
+    id: "watch",
+    type: "Accessory",
+    desc: "Slim gold dress watch, leather strap",
+    brand: "Cartier · Tank",
+    confidence: 87,
+    img: itemWatch,
+  },
 ];
 
 const TIERS = [
@@ -81,19 +116,30 @@ function TopNav() {
   return (
     <header
       className={`fixed inset-x-0 top-0 z-50 transition-all ${
-        scrolled ? "backdrop-blur-md bg-navy/80 border-b border-[rgba(201,169,106,0.15)]" : "bg-transparent"
+        scrolled
+          ? "backdrop-blur-md bg-navy/80 border-b border-[rgba(201,169,106,0.15)]"
+          : "bg-transparent"
       }`}
     >
       <div className="mx-auto max-w-7xl px-6 lg:px-10 h-16 flex items-center justify-between">
-        <a href="#home" className="font-serif text-xl tracking-[0.2em] text-gold">VEYLOR</a>
+        <a href="#home" className="font-serif text-xl tracking-[0.2em] text-gold">
+          VEYLOR
+        </a>
         <nav className="hidden md:flex items-center gap-10">
           {NAV.map((n) => (
-            <a key={n.id} href={`#${n.id}`} className="text-[11px] tracking-luxe uppercase text-foreground/70 hover:text-gold transition-colors">
+            <a
+              key={n.id}
+              href={`#${n.id}`}
+              className="text-[11px] tracking-luxe uppercase text-foreground/70 hover:text-gold transition-colors"
+            >
               {n.label}
             </a>
           ))}
         </nav>
-        <a href="#demo" className="text-[11px] tracking-luxe uppercase border-b border-gold pb-0.5 text-gold">
+        <a
+          href="#demo"
+          className="text-[11px] tracking-luxe uppercase border-b border-gold pb-0.5 text-gold"
+        >
           Try Demo
         </a>
       </div>
@@ -117,13 +163,21 @@ function Hero() {
             <span className="gold-grad">Discover the look.</span>
           </h1>
           <p className="mt-8 max-w-md text-foreground/70 leading-relaxed">
-            Veylor identifies fashion pieces and locates exact or comparable options across luxury, premium, and affordable tiers.
+            Veylor identifies fashion pieces and locates exact or comparable options across luxury,
+            premium, and affordable tiers.
           </p>
           <div className="mt-10 flex items-center gap-6">
-            <a href="#demo" className="group inline-flex items-center gap-3 bg-gold text-navy px-7 py-3.5 text-[11px] tracking-luxe uppercase font-medium hover:bg-[var(--gold-soft)] transition-colors">
-              Try the Demo <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-1" />
+            <a
+              href="#demo"
+              className="group inline-flex items-center gap-3 bg-gold text-navy px-7 py-3.5 text-[11px] tracking-luxe uppercase font-medium hover:bg-[var(--gold-soft)] transition-colors"
+            >
+              Try the Demo{" "}
+              <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-1" />
             </a>
-            <a href="#how" className="text-[11px] tracking-luxe uppercase text-foreground/80 border-b border-foreground/30 pb-0.5 hover:border-gold hover:text-gold transition-colors">
+            <a
+              href="#how"
+              className="text-[11px] tracking-luxe uppercase text-foreground/80 border-b border-foreground/30 pb-0.5 hover:border-gold hover:text-gold transition-colors"
+            >
               How It Works
             </a>
           </div>
@@ -172,7 +226,9 @@ function SectionHeader({ eyebrow, title }: { eyebrow: string; title: string }) {
         <span className="h-px w-8 bg-gold/60" />
         {eyebrow}
       </div>
-      <h2 className="font-serif text-4xl sm:text-5xl text-foreground max-w-2xl leading-tight">{title}</h2>
+      <h2 className="font-serif text-4xl sm:text-5xl text-foreground max-w-2xl leading-tight">
+        {title}
+      </h2>
     </div>
   );
 }
@@ -180,9 +236,24 @@ function SectionHeader({ eyebrow, title }: { eyebrow: string; title: string }) {
 function HowItWorks() {
   const steps = [
     { n: "01", icon: Upload, title: "Upload", desc: "Drop an image or paste a link." },
-    { n: "02", icon: ScanLine, title: "Identify", desc: "AI reads garments, accessories, silhouette." },
-    { n: "03", icon: Sparkles, title: "Analyze", desc: "Color palette, material, fashion aesthetic." },
-    { n: "04", icon: ShoppingBag, title: "Discover", desc: "Real products across three pricing tiers." },
+    {
+      n: "02",
+      icon: ScanLine,
+      title: "Identify",
+      desc: "AI reads garments, accessories, silhouette.",
+    },
+    {
+      n: "03",
+      icon: Sparkles,
+      title: "Analyze",
+      desc: "Color palette, material, fashion aesthetic.",
+    },
+    {
+      n: "04",
+      icon: ShoppingBag,
+      title: "Discover",
+      desc: "Real products across three pricing tiers.",
+    },
   ];
   return (
     <section id="how" className="py-32 px-6 lg:px-10 border-t border-[rgba(201,169,106,0.12)]">
@@ -190,7 +261,10 @@ function HowItWorks() {
         <SectionHeader eyebrow="How It Works" title="From a single image to the entire look." />
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-px bg-[rgba(201,169,106,0.12)]">
           {steps.map((s) => (
-            <div key={s.n} className="bg-navy p-8 lg:p-10 group hover:bg-[var(--navy-deep)] transition-colors">
+            <div
+              key={s.n}
+              className="bg-navy p-8 lg:p-10 group hover:bg-[var(--navy-deep)] transition-colors"
+            >
               <div className="flex items-center justify-between">
                 <span className="text-[10px] tracking-luxe text-gold/60">{s.n}</span>
                 <s.icon className="w-4 h-4 text-gold/70 group-hover:text-gold transition-colors" />
@@ -214,7 +288,10 @@ function Demo() {
   };
 
   return (
-    <section id="demo" className="py-32 px-6 lg:px-10 border-t border-[rgba(201,169,106,0.12)] bg-[var(--navy-deep)]">
+    <section
+      id="demo"
+      className="py-32 px-6 lg:px-10 border-t border-[rgba(201,169,106,0.12)] bg-[var(--navy-deep)]"
+    >
       <div className="mx-auto max-w-7xl">
         <SectionHeader eyebrow="Interactive Demo" title="See Veylor read an outfit." />
 
@@ -249,7 +326,11 @@ function Demo() {
                     { top: "70%", left: "50%", label: "Trouser" },
                     { top: "92%", left: "52%", label: "Boot" },
                   ].map((m) => (
-                    <div key={m.label} style={{ top: m.top, left: m.left }} className="absolute -translate-x-1/2 -translate-y-1/2">
+                    <div
+                      key={m.label}
+                      style={{ top: m.top, left: m.left }}
+                      className="absolute -translate-x-1/2 -translate-y-1/2"
+                    >
                       <span className="block w-2.5 h-2.5 rounded-full bg-gold ring-4 ring-gold/20" />
                       <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[9px] tracking-luxe uppercase text-gold whitespace-nowrap bg-navy/80 px-2 py-0.5">
                         {m.label}
@@ -265,10 +346,16 @@ function Demo() {
             </div>
 
             <div className="mt-6 flex flex-wrap gap-3 max-w-lg">
-              <button onClick={run} className="inline-flex items-center gap-2 border border-gold/40 px-4 py-2.5 text-[10px] tracking-luxe uppercase text-foreground hover:bg-gold hover:text-navy transition-colors">
+              <button
+                onClick={run}
+                className="inline-flex items-center gap-2 border border-gold/40 px-4 py-2.5 text-[10px] tracking-luxe uppercase text-foreground hover:bg-gold hover:text-navy transition-colors"
+              >
                 <Upload className="w-3.5 h-3.5" /> Upload Image
               </button>
-              <button onClick={run} className="inline-flex items-center gap-2 border border-[rgba(201,169,106,0.2)] px-4 py-2.5 text-[10px] tracking-luxe uppercase text-foreground/70 hover:text-gold hover:border-gold/40 transition-colors">
+              <button
+                onClick={run}
+                className="inline-flex items-center gap-2 border border-[rgba(201,169,106,0.2)] px-4 py-2.5 text-[10px] tracking-luxe uppercase text-foreground/70 hover:text-gold hover:border-gold/40 transition-colors"
+              >
                 <Link2 className="w-3.5 h-3.5" /> Paste Link
               </button>
             </div>
@@ -278,9 +365,13 @@ function Demo() {
           <div className="lg:col-span-6">
             <div className="border border-[rgba(201,169,106,0.18)] bg-navy p-8">
               <div className="flex items-center justify-between border-b border-[rgba(201,169,106,0.15)] pb-4">
-                <div className="text-[10px] tracking-luxe uppercase text-gold/80">Veylor AI · Analysis</div>
+                <div className="text-[10px] tracking-luxe uppercase text-gold/80">
+                  Veylor AI · Analysis
+                </div>
                 <div className="flex items-center gap-2 text-[10px] tracking-luxe uppercase text-foreground/50">
-                  <span className={`w-1.5 h-1.5 rounded-full ${stage === "scanning" ? "bg-gold animate-pulse" : "bg-gold/40"}`} />
+                  <span
+                    className={`w-1.5 h-1.5 rounded-full ${stage === "scanning" ? "bg-gold animate-pulse" : "bg-gold/40"}`}
+                  />
                   {stage === "upload" && "Idle"}
                   {stage === "scanning" && "Scanning"}
                   {stage === "results" && "Complete"}
@@ -295,7 +386,9 @@ function Demo() {
                   { k: "Palette", v: "Charcoal · Cream" },
                 ].map((b) => (
                   <div key={b.k} className="bg-navy p-4">
-                    <div className="text-[9px] tracking-luxe uppercase text-foreground/40">{b.k}</div>
+                    <div className="text-[9px] tracking-luxe uppercase text-foreground/40">
+                      {b.k}
+                    </div>
                     <div className="mt-2 text-sm text-foreground">{b.v}</div>
                   </div>
                 ))}
@@ -305,11 +398,22 @@ function Demo() {
               <div className="mt-6 space-y-px bg-[rgba(201,169,106,0.12)]">
                 {DETECTED.map((d, i) => (
                   <div key={d.id} className="bg-navy flex items-center gap-4 p-4">
-                    <img src={d.img} alt={d.type} loading="lazy" width={80} height={100} className="w-12 h-14 object-cover bg-paper" />
+                    <img
+                      src={d.img}
+                      alt={d.type}
+                      loading="lazy"
+                      width={80}
+                      height={100}
+                      className="w-12 h-14 object-cover bg-paper"
+                    />
                     <div className="flex-1 min-w-0">
                       <div className="flex items-baseline justify-between gap-2">
-                        <div className="text-[10px] tracking-luxe uppercase text-gold/80">{d.type}</div>
-                        <div className="text-[10px] tracking-luxe text-foreground/40">{stage === "results" ? `${d.confidence}%` : "—"}</div>
+                        <div className="text-[10px] tracking-luxe uppercase text-gold/80">
+                          {d.type}
+                        </div>
+                        <div className="text-[10px] tracking-luxe text-foreground/40">
+                          {stage === "results" ? `${d.confidence}%` : "—"}
+                        </div>
                       </div>
                       <div className="mt-1 text-sm text-foreground truncate">{d.desc}</div>
                       <div className="text-[11px] text-foreground/50">{d.brand}</div>
@@ -327,7 +431,10 @@ function Demo() {
 
 function Discovery() {
   return (
-    <section id="discovery" className="py-32 px-6 lg:px-10 border-t border-[rgba(201,169,106,0.12)]">
+    <section
+      id="discovery"
+      className="py-32 px-6 lg:px-10 border-t border-[rgba(201,169,106,0.12)]"
+    >
       <div className="mx-auto max-w-7xl">
         <SectionHeader eyebrow="Product Discovery" title="The same look, across every budget." />
 
@@ -347,16 +454,28 @@ function Discovery() {
                   return (
                     <div key={it.name} className="group">
                       <div className="aspect-[4/5] overflow-hidden bg-paper">
-                        <img src={img} alt={it.name} loading="lazy" width={800} height={1000} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
+                        <img
+                          src={img}
+                          alt={it.name}
+                          loading="lazy"
+                          width={800}
+                          height={1000}
+                          className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                        />
                       </div>
                       <div className="mt-3 flex items-start justify-between gap-3">
                         <div className="min-w-0">
                           <div className="text-sm text-foreground truncate">{it.name}</div>
-                          <div className="text-[11px] text-foreground/45 tracking-wide">{it.store}</div>
+                          <div className="text-[11px] text-foreground/45 tracking-wide">
+                            {it.store}
+                          </div>
                         </div>
                         <div className="text-sm text-gold whitespace-nowrap">{it.price}</div>
                       </div>
-                      <a href="#" className="mt-2 inline-block text-[10px] tracking-luxe uppercase text-foreground/60 hover:text-gold border-b border-foreground/20 hover:border-gold pb-0.5">
+                      <a
+                        href="#"
+                        className="mt-2 inline-block text-[10px] tracking-luxe uppercase text-foreground/60 hover:text-gold border-b border-foreground/20 hover:border-gold pb-0.5"
+                      >
                         View Item
                       </a>
                     </div>
@@ -383,9 +502,15 @@ function BusinessModel() {
     "Fashion-focused users wanting exact celebrity / runway identification.",
   ];
   return (
-    <section id="model" className="py-32 px-6 lg:px-10 border-t border-[rgba(201,169,106,0.12)] bg-[var(--navy-deep)]">
+    <section
+      id="model"
+      className="py-32 px-6 lg:px-10 border-t border-[rgba(201,169,106,0.12)] bg-[var(--navy-deep)]"
+    >
       <div className="mx-auto max-w-7xl">
-        <SectionHeader eyebrow="Business Model" title="A platform built on aesthetic intelligence." />
+        <SectionHeader
+          eyebrow="Business Model"
+          title="A platform built on aesthetic intelligence."
+        />
 
         <div className="grid lg:grid-cols-12 gap-12">
           <div className="lg:col-span-5">
@@ -403,7 +528,9 @@ function BusinessModel() {
             <div className="grid sm:grid-cols-2 gap-px bg-[rgba(201,169,106,0.12)]">
               {pillars.map((p, i) => (
                 <div key={p.t} className="bg-navy p-8">
-                  <div className="text-[10px] tracking-luxe text-gold/60">{String(i + 1).padStart(2, "0")}</div>
+                  <div className="text-[10px] tracking-luxe text-gold/60">
+                    {String(i + 1).padStart(2, "0")}
+                  </div>
                   <div className="mt-4 font-serif text-2xl text-foreground">{p.t}</div>
                   <div className="mt-2 text-sm text-foreground/55 leading-relaxed">{p.d}</div>
                 </div>
@@ -423,7 +550,10 @@ function FinalCTA() {
         <h2 className="font-serif text-5xl sm:text-6xl lg:text-7xl leading-[1.05]">
           Discover fashion <span className="gold-grad">instantly.</span>
         </h2>
-        <a href="#demo" className="mt-12 inline-flex items-center gap-3 bg-gold text-navy px-8 py-4 text-[11px] tracking-luxe uppercase font-medium hover:bg-[var(--gold-soft)] transition-colors">
+        <a
+          href="#demo"
+          className="mt-12 inline-flex items-center gap-3 bg-gold text-navy px-8 py-4 text-[11px] tracking-luxe uppercase font-medium hover:bg-[var(--gold-soft)] transition-colors"
+        >
           Start with an Image <ArrowRight className="w-3.5 h-3.5" />
         </a>
       </div>
