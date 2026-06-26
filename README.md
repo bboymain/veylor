@@ -1,18 +1,60 @@
 # Veylor
 
-Veylor is a TanStack Start React app for an AI fashion discovery experience. It uses Vite, TanStack Router, Tailwind CSS, and Cloudflare Workers configuration.
+**Veylor is the Shazam of fashion.**
+
+Upload a photo of an outfit, paste an image link, or scan a look to identify the clothing and accessories being worn. Veylor is designed to help users discover exact products when possible, then find visually similar alternatives across luxury, premium, and affordable price ranges.
+
+## What Veylor Does
+
+Veylor turns an outfit image into a shoppable fashion breakdown.
+
+The experience is designed to:
+
+- Detect individual fashion items in an outfit
+- Identify clothing, shoes, watches, and accessories
+- Suggest possible brands and product matches
+- Find the exact item when available
+- Recommend similar-looking alternatives
+- Compare options across different price tiers
+- Help users recreate a complete look within their budget
+
+## How It Works
+
+1. **Upload or paste an outfit**  
+   Add a photo from your device or paste a link to an image.
+
+2. **AI analyzes the look**  
+   Veylor separates the outfit into individual pieces such as outerwear, tops, pants, shoes, and accessories.
+
+3. **Products are identified**  
+   Each piece is matched to likely brands, products, styles, materials, and colors.
+
+4. **Alternatives are discovered**  
+   Users can explore the original item or similar options grouped into luxury, premium, and affordable tiers.
+
+## Vision
+
+Fashion inspiration is everywhere, but finding the actual products behind a look can be difficult. Veylor aims to make fashion discovery as simple as identifying a song with Shazam.
+
+See an outfit you like. Upload it. Discover the look.
+
+## Current Status
+
+The current repository contains the Veylor landing page and product concept experience. The fashion-recognition, product-search, and recommendation systems are planned as the project develops.
 
 ## Tech Stack
 
 - React 19
-- TanStack Start and TanStack Router
+- TanStack Start
+- TanStack Router
 - Vite
 - Tailwind CSS v4
 - shadcn-style UI components
-- Bun package manager
-- Cloudflare Workers via Wrangler
+- Bun
+- Cloudflare Workers
+- Wrangler
 
-## Local Setup
+## Local Development
 
 Install dependencies:
 
@@ -32,7 +74,7 @@ Build for production:
 bun run build
 ```
 
-Preview the production build locally:
+Preview the production build:
 
 ```bash
 bun run preview
@@ -52,23 +94,27 @@ bunx tsc --noEmit
 
 ## Project Structure
 
-- `src/routes/__root.tsx`: root route, document shell, metadata, global providers
-- `src/routes/index.tsx`: main Veylor page
-- `src/router.tsx`: TanStack Router setup
-- `src/start.ts`: TanStack Start middleware
-- `src/server.ts`: Cloudflare Worker SSR wrapper and branded error handling
-- `src/assets/`: image assets used by the page
-- `src/components/ui/`: reusable UI components
-- `wrangler.jsonc`: Cloudflare Worker deployment configuration
+- `src/routes/__root.tsx` — root route, metadata, document shell, and providers
+- `src/routes/index.tsx` — main Veylor landing page
+- `src/router.tsx` — TanStack Router setup
+- `src/start.ts` — TanStack Start middleware
+- `src/server.ts` — Cloudflare Worker SSR wrapper
+- `src/assets/` — fashion images and visual assets
+- `src/components/ui/` — reusable interface components
+- `wrangler.jsonc` — Cloudflare Workers deployment configuration
 
 ## Environment Variables
 
-No required environment variables were found in the current codebase.
+The current landing page does not require environment variables.
 
-For future client-side variables, use the `VITE_` prefix and document them in `.env.example`. For Cloudflare local-only secrets, use `.dev.vars`; it is ignored by git.
+Future AI, visual-search, product-search, and affiliate integrations may require API credentials. Client-side variables should use the `VITE_` prefix and be documented in an `.env.example` file. Local Cloudflare secrets should be stored in `.dev.vars`.
 
-## External Services
+## Deployment
 
-The repository is configured for Cloudflare Workers deployment with Wrangler. To deploy, configure Cloudflare account access locally or in CI, then run the production build and deploy with Wrangler.
+The project is configured for deployment through Cloudflare Workers using Wrangler.
 
-This repo no longer depends on Lovable-specific Vite packages or project metadata.
+```bash
+bun run build
+```
+
+Configure Cloudflare access locally or in CI before deploying the production build.
