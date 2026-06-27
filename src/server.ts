@@ -25,6 +25,16 @@ function brandedErrorResponse(): Response {
   });
 }
 
+function applyWorkerEnv(env: unknown) {
+  if (typeof process === "undefined" || !env || typeof env !== "object") return;
+
+  for (const [key, value] of Object.entries(env)) {
+    if (typeof value === "string" && process.env[key] === undefined) {
+      process.env[key] = value;
+    }
+  }
+}
+
 function isCatastrophicSsrErrorBody(body: string, responseStatus: number): boolean {
   let payload: unknown;
   try {
@@ -69,6 +79,7 @@ async function normalizeCatastrophicSsrResponse(response: Response): Promise<Res
 export default {
   async fetch(request: Request, env: unknown, ctx: unknown) {
     try {
+      applyWorkerEnv(env);
       const handler = await getServerEntry();
       const response = await handler.fetch(request, env, ctx);
       return await normalizeCatastrophicSsrResponse(response);

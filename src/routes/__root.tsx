@@ -48,23 +48,17 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   );
 }
 
-const title = "Veylor — Find Any Outfit with AI";
-const description =
-  "Upload a photo of any outfit to identify clothing, find exact matches, and discover similar alternatives across luxury, premium, and affordable price tiers.";
-
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
   head: () => ({
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title },
-      { name: "description", content: description },
-      { property: "og:title", content: title },
-      { property: "og:description", content: description },
-      { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary_large_image" },
-      { name: "twitter:title", content: title },
-      { name: "twitter:description", content: description },
+      { title: "Veylor — The Shazam of Fashion" },
+      {
+        name: "description",
+        content:
+          "Veylor is the AI fashion intelligence platform. Upload any outfit, discover the look — across luxury, premium, and affordable tiers.",
+      },
     ],
     links: [
       { rel: "stylesheet", href: appCss },
