@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { MAX_IMAGE_BYTES, parseDataUrlImage, SUPPORTED_IMAGE_MIME_TYPES } from "@/lib/image-data";
+import { jsonResponse } from "@/lib/fashion-scan";
 
-export const OLLAMA_DEFAULT_BASE_URL = "http://localhost:11434";
 export const OLLAMA_DEFAULT_MODEL = "qwen2.5vl";
 export const OLLAMA_TIMEOUT_MS = 45_000;
 export { MAX_IMAGE_BYTES, parseDataUrlImage, SUPPORTED_IMAGE_MIME_TYPES };
@@ -65,14 +65,15 @@ type OllamaChatResponse = {
 };
 
 export function getOllamaConfig(env: Record<string, string | undefined> = {}) {
+  const baseUrl = env.OLLAMA_BASE_URL?.trim();
+  if (!baseUrl) {
+    throw new Error("OLLAMA_BASE_URL is required for the standalone local provider.");
+  }
+
   return {
-    baseUrl: (env.OLLAMA_BASE_URL || OLLAMA_DEFAULT_BASE_URL).replace(/\/$/, ""),
+    baseUrl: baseUrl.replace(/\/$/, ""),
     model: env.OLLAMA_VISION_MODEL || OLLAMA_DEFAULT_MODEL,
   };
-}
-
-export function jsonResponse(payload: unknown, status = 200) {
-  return Response.json(payload, { status });
 }
 
 export function publicOllamaError(message: string, status = 500, code = "OLLAMA_ERROR") {

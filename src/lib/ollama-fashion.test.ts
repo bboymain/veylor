@@ -65,7 +65,11 @@ describe("Ollama fashion provider", () => {
       });
     };
 
-    const result = await analyzeFashionWithOllama("abc123", { fetchImpl, timeoutMs: 100 });
+    const result = await analyzeFashionWithOllama("abc123", {
+      baseUrl: "test-endpoint",
+      fetchImpl,
+      timeoutMs: 100,
+    });
 
     expect(calls).toBe(2);
     expect(result.category).toBe("outerwear");
@@ -76,7 +80,11 @@ describe("Ollama fashion provider", () => {
       throw new Error("fetch failed ECONNREFUSED");
     };
 
-    const health = await checkOllamaHealth({ fetchImpl, timeoutMs: 100 });
+    const health = await checkOllamaHealth({
+      baseUrl: "test-endpoint",
+      fetchImpl,
+      timeoutMs: 100,
+    });
 
     expect(health.status).toBe("ollama_not_running");
   });
@@ -85,7 +93,12 @@ describe("Ollama fashion provider", () => {
     const fetchImpl = async () =>
       jsonResponse({ models: [{ name: "llava:latest", details: { families: ["vision"] } }] });
 
-    const health = await checkOllamaHealth({ fetchImpl, model: "gemma3", timeoutMs: 100 });
+    const health = await checkOllamaHealth({
+      baseUrl: "test-endpoint",
+      fetchImpl,
+      model: "gemma3",
+      timeoutMs: 100,
+    });
 
     expect(health.status).toBe("model_not_installed");
   });

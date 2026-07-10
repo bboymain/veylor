@@ -1,8 +1,7 @@
 import { createPartFromBase64, GoogleGenAI, Type, type Schema } from "@google/genai";
 import { z } from "zod";
-import { FashionScanResultSchema, type FashionScanResult } from "@/lib/fashion-scan";
+import { FashionScanResultSchema, jsonResponse, type FashionScanResult } from "@/lib/fashion-scan";
 import type { ParsedDataUrlImage } from "@/lib/image-data";
-import { jsonResponse } from "@/lib/ollama-fashion";
 
 export const GEMINI_MODEL = "gemini-2.5-flash";
 export const GEMINI_TIMEOUT_MS = 45_000;
@@ -156,14 +155,14 @@ export function mapGeminiError(error: unknown) {
   }
   if (lower.includes("missing") && lower.includes("api key")) {
     return publicGeminiError(
-      "Missing Gemini API key. Add GEMINI_API_KEY to .dev.vars.",
+      "AI analysis is not configured. Please contact the site owner.",
       500,
       "GEMINI_API_KEY_MISSING",
     );
   }
   if (lower.includes("abort") || lower.includes("timeout")) {
     return publicGeminiError(
-      "The Gemini request timed out. Try a smaller crop or image.",
+      "The analysis timed out. Try a smaller crop or image.",
       504,
       "GEMINI_TIMEOUT",
     );
@@ -176,28 +175,28 @@ export function mapGeminiError(error: unknown) {
     lower.includes("credential")
   ) {
     return publicGeminiError(
-      "Gemini rejected the API key. Check GEMINI_API_KEY.",
+      "AI analysis is temporarily unavailable. Please try again later.",
       401,
       "GEMINI_AUTH_FAILED",
     );
   }
   if (status === 429 || lower.includes("rate limit") || lower.includes("quota")) {
     return publicGeminiError(
-      "Gemini rate limit reached. Wait and try again.",
+      "The analysis service is busy. Wait a moment and try again.",
       429,
       "GEMINI_RATE_LIMIT",
     );
   }
   if (lower.includes("empty") || lower.includes("invalid") || error instanceof z.ZodError) {
     return publicGeminiError(
-      "Invalid Gemini response. Try again or use manual entry.",
+      "The analysis returned an unexpected result. Try again with a clearer photo.",
       502,
       "INVALID_GEMINI_RESPONSE",
     );
   }
 
   return publicGeminiError(
-    "Gemini could not analyze the image. Try again or use manual entry.",
+    "The image could not be analyzed. Try again with a clearer photo.",
     502,
     "GEMINI_ERROR",
   );

@@ -53,11 +53,11 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Veylor — The Shazam of Fashion" },
+      { title: "Veylor - AI Fashion Scanner" },
       {
         name: "description",
         content:
-          "Veylor is the AI fashion intelligence platform. Upload any outfit, discover the look — across luxury, premium, and affordable tiers.",
+          "Upload a fashion photo and identify visible styles, colors, materials, and details to find similar looks online.",
       },
     ],
     links: [

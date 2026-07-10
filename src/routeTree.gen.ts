@@ -10,23 +10,11 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as ApiOllamaHealthRouteImport } from './routes/api/ollama-health'
-import { Route as ApiOllamaFashionRouteImport } from './routes/api/ollama-fashion'
 import { Route as ApiFashionScanRouteImport } from './routes/api/fashion-scan'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiOllamaHealthRoute = ApiOllamaHealthRouteImport.update({
-  id: '/api/ollama-health',
-  path: '/api/ollama-health',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiOllamaFashionRoute = ApiOllamaFashionRouteImport.update({
-  id: '/api/ollama-fashion',
-  path: '/api/ollama-fashion',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiFashionScanRoute = ApiFashionScanRouteImport.update({
@@ -38,44 +26,27 @@ const ApiFashionScanRoute = ApiFashionScanRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/api/fashion-scan': typeof ApiFashionScanRoute
-  '/api/ollama-fashion': typeof ApiOllamaFashionRoute
-  '/api/ollama-health': typeof ApiOllamaHealthRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/api/fashion-scan': typeof ApiFashionScanRoute
-  '/api/ollama-fashion': typeof ApiOllamaFashionRoute
-  '/api/ollama-health': typeof ApiOllamaHealthRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/api/fashion-scan': typeof ApiFashionScanRoute
-  '/api/ollama-fashion': typeof ApiOllamaFashionRoute
-  '/api/ollama-health': typeof ApiOllamaHealthRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths:
-    | '/'
-    | '/api/fashion-scan'
-    | '/api/ollama-fashion'
-    | '/api/ollama-health'
+  fullPaths: '/' | '/api/fashion-scan'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/api/fashion-scan' | '/api/ollama-fashion' | '/api/ollama-health'
-  id:
-    | '__root__'
-    | '/'
-    | '/api/fashion-scan'
-    | '/api/ollama-fashion'
-    | '/api/ollama-health'
+  to: '/' | '/api/fashion-scan'
+  id: '__root__' | '/' | '/api/fashion-scan'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ApiFashionScanRoute: typeof ApiFashionScanRoute
-  ApiOllamaFashionRoute: typeof ApiOllamaFashionRoute
-  ApiOllamaHealthRoute: typeof ApiOllamaHealthRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -85,20 +56,6 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/ollama-health': {
-      id: '/api/ollama-health'
-      path: '/api/ollama-health'
-      fullPath: '/api/ollama-health'
-      preLoaderRoute: typeof ApiOllamaHealthRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/ollama-fashion': {
-      id: '/api/ollama-fashion'
-      path: '/api/ollama-fashion'
-      fullPath: '/api/ollama-fashion'
-      preLoaderRoute: typeof ApiOllamaFashionRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/fashion-scan': {
@@ -114,8 +71,6 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ApiFashionScanRoute: ApiFashionScanRoute,
-  ApiOllamaFashionRoute: ApiOllamaFashionRoute,
-  ApiOllamaHealthRoute: ApiOllamaHealthRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
