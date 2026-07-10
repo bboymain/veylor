@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "cases": [
+    {
+      "id": "look-001",
+      "image": "images/look-001.jpg",
+      "expectedItems": [
+        {
+          "category": "jacket",
+          "color": "black",
+          "style": "biker",
+          "pattern": null,
+          "material": "leather",
+          "visibleBrand": null
+        }
+      ]
+    }
+  ]
+}
