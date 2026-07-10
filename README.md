@@ -64,6 +64,26 @@ bun run dev
 Uploaded images are cropped and resized in the browser before scanning and are not saved by Veylor.
 Saved scans use browser localStorage only.
 
+## Private Gemini benchmark
+
+The Phase 2 foundation is a local-only raw-results runner; it does not add a webpage, scoring, or a
+production route. Put 20-30 private JPG, PNG, or WebP test images in `benchmark/images/`. Copy
+`benchmark/manifest.example.json` to the ignored `benchmark/manifest.local.json`, then add one case
+per image. Each case can contain multiple visible items, and each expected item must label
+`category`, `color`, `style`, `pattern`, `material`, and `visibleBrand`. Use `null` when a pattern,
+material, or visible brand is not supported by the image.
+
+With `GEMINI_API_KEY` set in the untracked `.env.local`, run:
+
+```bash
+bun run scripts/fashion-benchmark.ts
+```
+
+The runner processes cases sequentially through the existing Gemini scan function and writes a
+timestamped raw JSON file to the ignored `benchmark/results/` directory. Each case records its
+labels, complete returned scan result, response time, and any failure. It does not calculate scores.
+An alternate manifest and output path may be passed as the first and second command arguments.
+
 ## Private local-provider code
 
 The standalone local experiment remains in `src/lib/ollama-fashion.ts` for private development and
@@ -114,5 +134,6 @@ bun run build
 
 ## Roadmap
 
-See [docs/implementation-roadmap.md](./docs/implementation-roadmap.md) for Phases 1-6. Phase 2 is
-documented as a benchmark design only and is not implemented yet.
+See [docs/implementation-roadmap.md](./docs/implementation-roadmap.md) for Phases 1-6. Phase 2 now
+has only the private raw-results foundation described above; scoring and product features remain
+unimplemented.

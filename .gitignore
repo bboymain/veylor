@@ -22,6 +22,11 @@ dist-ssr
 !.env.example
 .vercel/
 
+# Private local fashion benchmark data and output
+benchmark/images/
+benchmark/results/
+benchmark/manifest.local.json
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
