@@ -1,5 +1,4 @@
 import { describe, expect, test } from "bun:test";
-import { getAiProvider } from "./fashion-scan";
 import { GEMINI_MODEL, mapGeminiError, parseGeminiFashionContent } from "./gemini-fashion";
 
 const validGeminiResult = {
@@ -54,10 +53,5 @@ describe("Gemini fashion provider", () => {
     const response = mapGeminiError({ status: 429, message: "quota exceeded" });
 
     expect(await responseErrorCode(response)).toBe("GEMINI_RATE_LIMIT");
-  });
-
-  test("defaults provider selection to Gemini", () => {
-    expect(getAiProvider({})).toBe("gemini");
-    expect(getAiProvider({ AI_PROVIDER: "local" })).toBe("local");
   });
 });

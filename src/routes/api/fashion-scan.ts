@@ -1,14 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { analyzeFashionWithGemini, mapGeminiError } from "@/lib/gemini-fashion";
-import { getAiProvider, ollamaResultToFashionScanResult } from "@/lib/fashion-scan";
+import { jsonResponse } from "@/lib/fashion-scan";
 import { parseDataUrlImage } from "@/lib/image-data";
-import {
-  analyzeFashionWithOllama,
-  getOllamaConfig,
-  jsonResponse,
-  mapOllamaError,
-  publicOllamaError,
-} from "@/lib/ollama-fashion";
 
 type ServerEnv = Record<string, string | undefined>;
 
@@ -21,7 +14,6 @@ export const Route = createFileRoute("/api/fashion-scan")({
     handlers: {
       POST: async ({ request }) => {
         const env = serverEnv();
-        const provider = getAiProvider(env);
 
         try {
           const contentType = request.headers.get("content-type") ?? "";
@@ -42,26 +34,6 @@ export const Route = createFileRoute("/api/fashion-scan")({
 
           const image = parseDataUrlImage(body.imageDataUrl);
 
-          if (provider === "local") {
-            const config = getOllamaConfig(env);
-            const ollamaResult = await analyzeFashionWithOllama(image.base64, config);
-            const result = ollamaResultToFashionScanResult(ollamaResult);
-
-            if (result.items.length === 0 || result.items[0].confidence < 0.18) {
-              return publicOllamaError(
-                "The model could not confidently detect a fashion item.",
-                422,
-                "NO_FASHION_ITEM",
-              );
-            }
-
-            return jsonResponse({
-              provider,
-              result,
-              image: { mimeType: image.mimeType, byteLength: image.byteLength },
-            });
-          }
-
           const result = await analyzeFashionWithGemini(image, {
             apiKey: env.GEMINI_API_KEY,
           });
@@ -71,7 +43,7 @@ export const Route = createFileRoute("/api/fashion-scan")({
               {
                 error: {
                   code: "NO_FASHION_ITEM",
-                  message: "Gemini could not confidently detect a fashion item.",
+                  message: "No clothing or accessories were detected. Try a clearer photo.",
                 },
               },
               422,
@@ -79,16 +51,10 @@ export const Route = createFileRoute("/api/fashion-scan")({
           }
 
           return jsonResponse({
-            provider,
             result,
             image: { mimeType: image.mimeType, byteLength: image.byteLength },
           });
         } catch (error) {
-          if (provider === "local") {
-            const config = getOllamaConfig(env);
-            return mapOllamaError(error, config.model);
-          }
-
           return mapGeminiError(error);
         }
       },

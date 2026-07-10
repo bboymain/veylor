@@ -1,40 +1,41 @@
 # Veylor
 
-Veylor is a TanStack Start React app for AI-assisted fashion discovery. Users upload an outfit photo, crop/focus the image, analyze visible clothing and accessories through a secure server route, correct broad fashion attributes, and open retailer search links without fabricated product matches.
+Veylor is a TanStack Start app for AI-assisted fashion discovery. Users upload an outfit photo,
+focus the crop, analyze visible clothing and accessories, review structured fashion details, and
+open generated retailer searches for similar styles.
 
-## Tech Stack
+![Veylor preview](./2026-06-26%2015_43_15-.png)
+
+## Current public flow
+
+```text
+Upload Photo
+-> Preview Image
+-> Scan Outfit
+-> Review Detected Items
+-> Open Similar-Style Searches
+```
+
+The production endpoint is `/api/fashion-scan`. It validates the image, sends supported image bytes
+to Gemini from the server, validates the structured JSON response with Zod, and returns normalized
+fashion data to the browser. `GEMINI_API_KEY` is server-only and must never use a `VITE_` prefix.
+
+The current product does not verify exact product matches, live prices, inventory, or retailer
+availability. Retailer buttons open normal public search URLs generated from detected or corrected
+fashion details.
+
+## Tech stack
 
 - React 19
 - TanStack Start and TanStack Router
-- Vite
+- TypeScript and Vite
 - Tailwind CSS v4
-- shadcn-style UI components
-- Google Gemini 2.5 Flash via `@google/genai`
-- Optional local Ollama vision fallback
+- Google GenAI SDK
+- Zod
+- Nitro on Vercel
 - Bun package manager
-- Cloudflare Workers via Wrangler
 
-## Scanner MVP
-
-The active scanner sends the cropped image to `/api/fashion-scan`. The server chooses the AI provider from `AI_PROVIDER`:
-
-- `AI_PROVIDER=gemini` uses Gemini 2.5 Flash and is the default.
-- `AI_PROVIDER=local` uses the existing local Ollama integration as a fallback.
-
-The server validates supported image data, sends JPEG/PNG/WebP image bytes to the selected provider, requires structured JSON output, validates the model response with Zod, and returns only structured fashion attributes to the browser.
-
-Image limits:
-
-- Supported formats: JPG, JPEG, PNG, WEBP
-- Server-side maximum encoded image size: 6 MB
-- The browser crops and resizes the selected image before sending it to the server route
-- Uploaded images are not saved permanently
-
-Gemini identifies visual attributes and search phrases, but it may not always identify an exact product or brand. A brand should only be returned when visible text, a logo, a label, or a highly distinctive detail supports it.
-
-The MVP does not verify live prices, inventory, exact product matches, or retailer availability. Retailer buttons open normal public search URLs.
-
-## Local Setup
+## Local setup
 
 Install dependencies:
 
@@ -42,26 +43,17 @@ Install dependencies:
 bun install
 ```
 
-Copy the development secrets template:
-
-```bash
-cp .dev.vars.example .dev.vars
-```
-
-On Windows PowerShell:
+Copy the environment template to an untracked local file:
 
 ```powershell
-Copy-Item .dev.vars.example .dev.vars
+Copy-Item .env.example .env.local
 ```
 
-Add your Gemini API key to `.dev.vars`:
+Set the server-only key in `.env.local`:
 
 ```env
 GEMINI_API_KEY=your_real_key_here
-AI_PROVIDER=gemini
 ```
-
-Do not commit `.dev.vars`, `.env.local`, API keys, tokens, or secrets.
 
 Start the development server:
 
@@ -69,113 +61,58 @@ Start the development server:
 bun run dev
 ```
 
-Open the scanner, upload a fashion image, adjust the focus crop, then click **Scan Outfit**.
+Uploaded images are cropped and resized in the browser before scanning and are not saved by Veylor.
+Saved scans use browser localStorage only.
 
-## Local Ollama Fallback
+## Private local-provider code
 
-Gemini is the default provider. To use the local fallback instead, install Ollama, pull the local vision model, and set `AI_PROVIDER=local`.
+The standalone local experiment remains in `src/lib/ollama-fashion.ts` for private development and
+unit testing. It is not imported by the page, the production scan endpoint, or any public route. It
+has no default endpoint and requires a caller-supplied base URL, model, and invocation path from
+untracked local development code.
 
-```bash
-ollama pull qwen2.5vl
-```
+Production does not read `AI_PROVIDER`, cannot select the local module, and never contacts a local
+service.
 
-Local fallback variables:
+## Vercel deployment
 
-```env
-AI_PROVIDER=local
-OLLAMA_BASE_URL=http://localhost:11434
-OLLAMA_VISION_MODEL=qwen2.5vl
-```
+The app uses the Nitro Vite plugin. Vercel detects the TanStack Start/Nitro build and emits Vercel
+Functions without a required `vercel.json` for this project.
 
-Troubleshooting:
+In Vercel Project Settings, add `GEMINI_API_KEY` to Production and Preview as appropriate. Do not add
+`AI_PROVIDER`, and do not prefix the key with `VITE_`.
 
-- `Missing Gemini API key`: add `GEMINI_API_KEY` to `.dev.vars`.
-- `Gemini rejected the API key`: confirm the key is valid and active.
-- `Gemini rate limit reached`: wait and try again on the free tier.
-- `Unsupported image type`: use JPG, JPEG, PNG, or WEBP.
-- `Image is too large`: crop tighter or use a smaller image.
-- Local fallback `Ollama not running`: start Ollama and retry.
-- Local fallback `Model not installed`: run `ollama pull qwen2.5vl`.
+Recommended deployment flow:
 
-## Cloudflare Deployment
-
-This repository is configured for Cloudflare Workers with Wrangler.
-
-Set the production Gemini secret before deploying:
-
-```bash
-bunx wrangler secret put GEMINI_API_KEY
-```
-
-Set non-secret provider configuration in Wrangler or your deployment environment:
-
-```env
-AI_PROVIDER=gemini
-```
-
-Then build and deploy with your normal Cloudflare Workers workflow. Do not deploy from this setup step until you are ready.
+1. Import `bboymain/veylor` into Vercel.
+2. Confirm the detected framework/build command uses `bun run build` (or the repository `build`
+   script).
+3. Add the server-only `GEMINI_API_KEY` environment variable.
+4. Deploy and verify `/api/fashion-scan` with a real image.
 
 ## Commands
 
-Build for production:
-
 ```bash
+bun run dev
+bunx tsc --noEmit
+bun run lint
+bun test
 bun run build
 ```
 
-Preview the production build locally:
+## Project structure
 
-```bash
-bun run preview
-```
+- `src/routes/index.tsx`: homepage, scanner, results, retailer searches, and Recent Scans UI
+- `src/routes/api/fashion-scan.ts`: Gemini-only production scan endpoint
+- `src/lib/gemini-fashion.ts`: server-side model schema, prompt, parsing, and error handling
+- `src/lib/fashion-scan.ts`: normalized public scan result types
+- `src/lib/image-data.ts`: server-side image data URL validation
+- `src/lib/image-processing.ts`: browser crop, resize, and thumbnail utilities
+- `src/lib/scan-history.ts`: browser-local scan history persistence
+- `src/start.ts`: TanStack Start request middleware
+- `docs/implementation-roadmap.md`: phased product and implementation roadmap
 
-Run linting:
+## Roadmap
 
-```bash
-bun run lint
-```
-
-Run TypeScript checks:
-
-```bash
-bunx tsc --noEmit
-```
-
-Run tests:
-
-```bash
-bun test
-```
-
-## Project Structure
-
-- `src/routes/__root.tsx`: root route, document shell, metadata, global providers
-- `src/routes/index.tsx`: main Veylor page and scanner UI
-- `src/routes/api/fashion-scan.ts`: provider-selected fashion scan endpoint
-- `src/lib/gemini-fashion.ts`: Gemini 2.5 Flash schema, prompt, validation, and error handling
-- `src/lib/ollama-fashion.ts`: local Ollama fallback provider
-- `src/lib/fashion-scan.ts`: shared normalized scan result types
-- `src/lib/image-data.ts`: shared image data URL validation
-- `src/router.tsx`: TanStack Router setup
-- `src/start.ts`: TanStack Start middleware
-- `src/server.ts`: Cloudflare Worker SSR wrapper and branded error handling
-- `src/assets/`: image assets used by the page
-- `src/components/ui/`: reusable UI components
-- `wrangler.jsonc`: Cloudflare Worker deployment configuration
-
-## Environment Variables
-
-- `GEMINI_API_KEY`: server-only Gemini API key. Required when `AI_PROVIDER=gemini`.
-- `AI_PROVIDER`: `gemini` or `local`; defaults to `gemini`.
-- `OLLAMA_BASE_URL`: local Ollama base URL for fallback, default `http://localhost:11434`.
-- `OLLAMA_VISION_MODEL`: local vision model for fallback, default `qwen2.5vl`.
-
-Never use a `VITE_` prefix for provider secrets. `GEMINI_API_KEY` must only be read by server routes or server functions.
-
-## External Services
-
-Gemini scans are sent from the server route to Google Gemini using the configured API key. Local fallback scans are sent from the server route to Ollama running on the developer machine. Veylor does not store uploaded photos permanently.
-
-Commerce buttons open normal public retailer search URLs. Veylor does not scrape retailers, verify product results, or fabricate product cards.
-
-This repo no longer depends on Lovable-specific Vite packages or project metadata.
+See [docs/implementation-roadmap.md](./docs/implementation-roadmap.md) for Phases 1-6. Phase 2 is
+documented as a benchmark design only and is not implemented yet.
