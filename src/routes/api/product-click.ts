@@ -1,11 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
+import { SearchIdSchema } from "@/lib/database-identifiers";
 import { jsonResponse } from "@/lib/fashion-scan";
 import { recordAlternativeClick } from "@/lib/product-persistence.server";
 import { recordProductClick } from "@/lib/search-logging.server";
 
-const ProductClickInputSchema = z.object({
-  searchId: z.string().min(1),
+export const ProductClickInputSchema = z.object({
+  searchId: SearchIdSchema,
   productUrl: z.string().min(1),
   productTitle: z.string().min(1),
   retailer: z.string().min(1),
