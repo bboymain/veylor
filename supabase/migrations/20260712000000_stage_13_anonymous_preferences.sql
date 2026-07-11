@@ -65,7 +65,11 @@ declare
 begin
   select
     coalesce(nullif(trim(p.retailer), ''), 'unknown'),
-    coalesce(nullif(trim(a.classification_label), ''), 'unknown'),
+    case
+      when p.verification_status = 'verified' then 'authentic'
+      when p.market_tier = 'premium' then 'premium'
+      else 'budget'
+    end,
     p.price
   into
     v_retailer,
