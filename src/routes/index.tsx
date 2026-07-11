@@ -1073,7 +1073,7 @@ function ProductResults({
   if (state.status === "empty") {
     return (
       <div className="mt-5 border-t border-[rgba(201,169,106,0.12)] pt-5 text-sm text-foreground/50">
-        No mock products were found for this item.
+        No products were found for this item.
       </div>
     );
   }
@@ -1090,14 +1090,17 @@ function ProductResults({
   }
 
   const groups = groupProductsByTier(state.products);
+  const isMockData = state.products.every((product) => product.source === "mock");
 
   return (
     <div className="mt-5 border-t border-[rgba(201,169,106,0.12)] pt-5">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="text-[9px] uppercase tracking-luxe text-foreground/35">
-          Mock shopping results
+          {isMockData ? "Mock shopping results" : "Shopping results"}
         </div>
-        <span className="text-[9px] uppercase tracking-luxe text-gold/60">Preview data</span>
+        <span className="text-[9px] uppercase tracking-luxe text-gold/60">
+          {isMockData ? "Preview data" : "Live results"}
+        </span>
       </div>
 
       <div className="mt-4 grid gap-4 sm:grid-cols-3">
@@ -1112,12 +1115,14 @@ function ProductResults({
               className="group overflow-hidden border border-[rgba(201,169,106,0.18)] bg-white/[0.02] transition-colors hover:border-gold/50"
             >
               <div className="aspect-[4/3] overflow-hidden bg-white/5">
-                <img
-                  src={product.imageUrl}
-                  alt=""
-                  loading="lazy"
-                  className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
-                />
+                {product.imageUrl && (
+                  <img
+                    src={product.imageUrl}
+                    alt=""
+                    loading="lazy"
+                    className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
+                  />
+                )}
               </div>
               <div className="p-3">
                 <div className="text-[8px] uppercase tracking-luxe text-gold/70">
