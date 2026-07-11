@@ -1,10 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { jsonResponse } from "@/lib/fashion-scan";
-import {
-  executeProductSearch,
-  mockProductSearchProvider,
-  ProductSearchInputSchema,
-} from "@/lib/product-search-provider";
+import { executeProductSearch, ProductSearchInputSchema } from "@/lib/product-search-provider";
+import { resolveProductSearchProvider } from "@/lib/serpapi-product-search.server";
 
 export const Route = createFileRoute("/api/product-search")({
   server: {
@@ -26,7 +23,7 @@ export const Route = createFileRoute("/api/product-search")({
           );
         }
 
-        const response = await executeProductSearch(mockProductSearchProvider, input.data);
+        const response = await executeProductSearch(resolveProductSearchProvider(), input.data);
         return jsonResponse(response, "error" in response ? 502 : 200);
       },
     },
