@@ -66,6 +66,25 @@ export function parseImpressionRpcRow(
   };
 }
 
+async function findPersistedProductIds(
+  config: SupabaseConfig,
+  normalizedUrls: string[],
+): Promise<string[]> {
+  const lookups = await Promise.all(
+    normalizedUrls.map(async (normalizedUrl) => {
+      const response = await fetch(
+        `${config.url}/rest/v1/products?select=id&normalized_product_url=eq.${encodeURIComponent(normalizedUrl)}&limit=1`,
+        { headers: headers(config) },
+      );
+      if (!response.ok) return null;
+      const rows = (await response.json()) as Array<{ id?: unknown }>;
+      return typeof rows[0]?.id === "string" ? rows[0].id : null;
+    }),
+  );
+
+  return [...new Set(lookups.filter((id): id is string => id !== null))];
+}
+
 export async function recordDisplayedAlternativeImpressions(input: {
   searchId: string | null;
   products: ProductSearchResult[];
@@ -78,28 +97,7 @@ export async function recordDisplayedAlternativeImpressions(input: {
   if (normalizedUrls.length === 0) return empty;
 
   try {
-    const filter = normalizedUrls
-      .map((url) => `"${url.replaceAll('"', '\\"')}"`)
-      .join(",");
-    const lookup = await fetch(
-      `${config.url}/rest/v1/products?select=id&normalized_product_url=in.(${encodeURIComponent(filter)})`,
-      { headers: headers(config) },
-    );
-    if (!lookup.ok) {
-      console.error(
-        `[alternative-impressions] Product lookup failed (status ${lookup.status}).`,
-      );
-      return empty;
-    }
-
-    const rows = (await lookup.json()) as Array<{ id?: unknown }>;
-    const productIds = [
-      ...new Set(
-        rows
-          .map((row) => row.id)
-          .filter((id): id is string => typeof id === "string"),
-      ),
-    ];
+    const productIds = await findPersistedProductIds(config, normalizedUrls);
     if (productIds.length === 0) return empty;
 
     const response = await fetch(
