@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
 import { recordDisplayedAlternativeImpressions } from "@/lib/alternative-impressions.server";
+import { consumeApiQuota, quotaExceededResponse } from "@/lib/api-quota.server";
 import {
   attachAnonymousShopperCookie,
   resolveAnonymousShopper,
@@ -18,6 +19,9 @@ import { logManualSearchAttempt } from "@/lib/search-logging.server";
 import { resolveProductSearchProvider } from "@/lib/serpapi-product-search.server";
 
 export const MAX_MANUAL_QUERY_LENGTH = 200;
+
+const PRODUCT_SEARCH_LIMIT = 40;
+const PRODUCT_SEARCH_WINDOW_SECONDS = 60 * 60;
 
 const ManualSearchInputSchema = z.object({
   query: z.string().trim().min(1).max(MAX_MANUAL_QUERY_LENGTH),
@@ -99,6 +103,26 @@ export const Route = createFileRoute("/api/product-search")({
           }
           manualQuery = manualInput.data.query;
           input = manualSearchInput(manualQuery);
+        }
+
+        // Only enforce the paid-provider quota when SerpApi is configured. The
+        // local mock fallback remains free for development and outages.
+        if (process.env.SERPAPI_API_KEY?.trim()) {
+          const quota = await consumeApiQuota({
+            profileId: shopper.id,
+            action: "product_search",
+            limit: PRODUCT_SEARCH_LIMIT,
+            windowSeconds: PRODUCT_SEARCH_WINDOW_SECONDS,
+          });
+          if (!quota.allowed) {
+            return attachAnonymousShopperCookie(
+              quotaExceededResponse(
+                quota,
+                "You have reached the hourly product-search limit. Please try again later.",
+              ),
+              shopper,
+            );
+          }
         }
 
         const providerResponse = await executeProductSearch(

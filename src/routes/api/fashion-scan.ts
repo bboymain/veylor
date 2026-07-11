@@ -1,4 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { consumeApiQuota, quotaExceededResponse } from "@/lib/api-quota.server";
+import {
+  attachAnonymousShopperCookie,
+  resolveAnonymousShopper,
+} from "@/lib/anonymous-shopper.server";
 import { analyzeFashionWithGemini, GEMINI_MODEL, mapGeminiError } from "@/lib/gemini-fashion";
 import { jsonResponse } from "@/lib/fashion-scan";
 import { parseDataUrlImage } from "@/lib/image-data";
@@ -11,6 +16,9 @@ import { logScanAttempt } from "@/lib/search-logging.server";
 
 type ServerEnv = Record<string, string | undefined>;
 
+const GEMINI_SCAN_LIMIT = 12;
+const GEMINI_SCAN_WINDOW_SECONDS = 60 * 60;
+
 function serverEnv(): ServerEnv {
   return typeof process === "undefined" ? {} : process.env;
 }
@@ -20,28 +28,36 @@ export const Route = createFileRoute("/api/fashion-scan")({
     handlers: {
       POST: async ({ request }) => {
         const env = serverEnv();
+        const shopper = resolveAnonymousShopper(request);
         let imageSha256: string | undefined;
 
         try {
           const contentType = request.headers.get("content-type") ?? "";
           if (!contentType.includes("application/json")) {
-            return jsonResponse(
-              { error: { code: "INVALID_REQUEST", message: "Expected a JSON request." } },
-              415,
+            return attachAnonymousShopperCookie(
+              jsonResponse(
+                { error: { code: "INVALID_REQUEST", message: "Expected a JSON request." } },
+                415,
+              ),
+              shopper,
             );
           }
 
           const body = (await request.json()) as { imageDataUrl?: unknown };
           if (typeof body.imageDataUrl !== "string") {
-            return jsonResponse(
-              { error: { code: "INVALID_IMAGE", message: "Missing image data." } },
-              400,
+            return attachAnonymousShopperCookie(
+              jsonResponse(
+                { error: { code: "INVALID_IMAGE", message: "Missing image data." } },
+                400,
+              ),
+              shopper,
             );
           }
 
           const image = parseDataUrlImage(body.imageDataUrl);
           imageSha256 = fingerprintImage(image);
 
+          // Verified cache hits are free and never consume paid Gemini quota.
           const cacheHit = await findVerifiedScanCacheHit(imageSha256);
           if (cacheHit) {
             const strongestItem = cacheHit.result.items.reduce((best, item) =>
@@ -58,12 +74,31 @@ export const Route = createFileRoute("/api/fashion-scan")({
             });
             await markVerifiedScanCacheHit(cacheHit.sourceSearchId);
 
-            return jsonResponse({
-              result: cacheHit.result,
-              image: { mimeType: image.mimeType, byteLength: image.byteLength },
-              searchId,
-              cache: { hit: true },
-            });
+            return attachAnonymousShopperCookie(
+              jsonResponse({
+                result: cacheHit.result,
+                image: { mimeType: image.mimeType, byteLength: image.byteLength },
+                searchId,
+                cache: { hit: true },
+              }),
+              shopper,
+            );
+          }
+
+          const quota = await consumeApiQuota({
+            profileId: shopper.id,
+            action: "gemini_scan",
+            limit: GEMINI_SCAN_LIMIT,
+            windowSeconds: GEMINI_SCAN_WINDOW_SECONDS,
+          });
+          if (!quota.allowed) {
+            return attachAnonymousShopperCookie(
+              quotaExceededResponse(
+                quota,
+                "You have reached the hourly scan limit. Please try again later.",
+              ),
+              shopper,
+            );
           }
 
           const result = await analyzeFashionWithGemini(image, {
@@ -76,15 +111,18 @@ export const Route = createFileRoute("/api/fashion-scan")({
               errorMessage: "No clothing or accessories were detected.",
               imageSha256,
             });
-            return jsonResponse(
-              {
-                error: {
-                  code: "NO_FASHION_ITEM",
-                  message: "No clothing or accessories were detected. Try a clearer photo.",
+            return attachAnonymousShopperCookie(
+              jsonResponse(
+                {
+                  error: {
+                    code: "NO_FASHION_ITEM",
+                    message: "No clothing or accessories were detected. Try a clearer photo.",
+                  },
+                  searchId,
                 },
-                searchId,
-              },
-              422,
+                422,
+              ),
+              shopper,
             );
           }
 
@@ -100,12 +138,15 @@ export const Route = createFileRoute("/api/fashion-scan")({
             imageSha256,
           });
 
-          return jsonResponse({
-            result,
-            image: { mimeType: image.mimeType, byteLength: image.byteLength },
-            searchId,
-            cache: { hit: false },
-          });
+          return attachAnonymousShopperCookie(
+            jsonResponse({
+              result,
+              image: { mimeType: image.mimeType, byteLength: image.byteLength },
+              searchId,
+              cache: { hit: false },
+            }),
+            shopper,
+          );
         } catch (error) {
           const errorResponse = mapGeminiError(error);
           const errorPayload = (await errorResponse.clone().json()) as {
@@ -116,7 +157,7 @@ export const Route = createFileRoute("/api/fashion-scan")({
             errorMessage: errorPayload.error.message,
             imageSha256,
           });
-          return errorResponse;
+          return attachAnonymousShopperCookie(errorResponse, shopper);
         }
       },
     },
