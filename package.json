@@ -9,7 +9,9 @@
     "build:dev": "vite build --mode development",
     "preview": "vite preview",
     "lint": "eslint .",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "typecheck": "tsc --noEmit",
+    "benchmark:validate": "bun benchmarks/fashion-scan/run.ts --validate benchmarks/fashion-scan/manifest.example.json"
   },
   "dependencies": {
     "@google/genai": "^2.10.0",
