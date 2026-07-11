@@ -683,10 +683,19 @@ function Scanner() {
             >
               {imageSrc ? (
                 <>
+                  {/* key={imageSrc} remounts these on every new upload so the
+                      reveal + gold sweep replay once per photo. Purely
+                      decorative; disabled under prefers-reduced-motion. */}
                   <img
+                    key={imageSrc}
                     src={imageSrc}
                     alt="Selected fashion photo preview"
-                    className="h-full w-full object-cover"
+                    className="animate-image-reveal h-full w-full object-cover"
+                  />
+                  <div
+                    key={`${imageSrc}-sweep`}
+                    className="upload-sweep pointer-events-none absolute inset-0"
+                    aria-hidden="true"
                   />
                   <div
                     className="absolute border-2 border-gold bg-navy/10 shadow-[0_0_0_999px_rgba(6,13,28,0.45)]"
