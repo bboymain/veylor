@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
 import { jsonResponse } from "@/lib/fashion-scan";
+import { recordAlternativeClick } from "@/lib/product-persistence.server";
 import { recordProductClick } from "@/lib/search-logging.server";
 
 const ProductClickInputSchema = z.object({
@@ -34,6 +35,15 @@ export const Route = createFileRoute("/api/product-click")({
         // Best-effort: the product link already opened in a new tab regardless
         // of whether this write succeeds, so always answer 200.
         const saved = await recordProductClick(input.data);
+
+        // Also mark the matching alternatives row (phase 7) when the product
+        // can be resolved by normalized URL. Additive: never blocks the
+        // response, and the searches-table click fields above are kept.
+        await recordAlternativeClick({
+          searchId: input.data.searchId,
+          productUrl: input.data.productUrl,
+        });
+
         return jsonResponse({ success: saved });
       },
     },

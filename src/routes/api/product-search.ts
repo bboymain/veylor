@@ -3,6 +3,7 @@ import { z } from "zod";
 import { jsonResponse, type FashionScanItem } from "@/lib/fashion-scan";
 import type { ProductSearchInput } from "@/lib/product-search";
 import { executeProductSearch, ProductSearchInputSchema } from "@/lib/product-search-provider";
+import { persistProductSearchResults } from "@/lib/product-persistence.server";
 import { logManualSearchAttempt } from "@/lib/search-logging.server";
 import { resolveProductSearchProvider } from "@/lib/serpapi-product-search.server";
 
@@ -13,6 +14,16 @@ export const MAX_MANUAL_QUERY_LENGTH = 200;
 const ManualSearchInputSchema = z.object({
   query: z.string().trim().min(1).max(MAX_MANUAL_QUERY_LENGTH),
 });
+
+// Additive, optional: the scan UI may include the searchId returned by
+// /api/fashion-scan alongside scan-shaped input so returned candidates can be
+// linked to that search as alternatives rows. Absent for older clients.
+const ScanSearchIdSchema = z.object({
+  searchId: z.string().min(1).optional(),
+});
+
+/** Confidence floor matching the UI's "visible brand" display threshold. */
+const DETECTED_BRAND_MIN_CONFIDENCE = 0.5;
 
 /**
  * Wraps a manual query in the provider input contract. The SerpApi provider
@@ -56,9 +67,12 @@ export const Route = createFileRoute("/api/product-search")({
         // otherwise accept a manual `{ query }` payload.
         let input: ProductSearchInput;
         let manualQuery: string | null = null;
+        let scanSearchId: string | null = null;
         const scanInput = ProductSearchInputSchema.safeParse(body);
         if (scanInput.success) {
           input = scanInput.data;
+          const withSearchId = ScanSearchIdSchema.safeParse(body);
+          scanSearchId = withSearchId.success ? (withSearchId.data.searchId ?? null) : null;
         } else {
           const manualInput = ManualSearchInputSchema.safeParse(body);
           if (!manualInput.success) {
@@ -78,8 +92,9 @@ export const Route = createFileRoute("/api/product-search")({
         // searches already get their row from /api/fashion-scan, so logging them
         // again would create duplicates. Logging is best-effort and never blocks
         // or breaks the product results.
+        let manualSearchId: string | null = null;
         if (manualQuery !== null) {
-          const searchId =
+          manualSearchId =
             "error" in response
               ? await logManualSearchAttempt({
                   status: "error",
@@ -87,7 +102,33 @@ export const Route = createFileRoute("/api/product-search")({
                   errorMessage: response.error.message,
                 })
               : await logManualSearchAttempt({ status: "success", query: manualQuery });
-          return jsonResponse({ ...response, searchId }, "error" in response ? 502 : 200);
+        }
+
+        // Best-effort persistence of real (non-mock) candidates into the
+        // products/alternatives tables. Never throws and never blocks results;
+        // alternatives are linked only when a searchId is known (manual: the
+        // row logged above; scan: the id the client received from
+        // /api/fashion-scan). Mock fallback results are never persisted.
+        if (!("error" in response)) {
+          const detectedBrandName =
+            manualQuery === null &&
+            input.item.visibleBrand &&
+            input.item.brandConfidence >= DETECTED_BRAND_MIN_CONFIDENCE
+              ? input.item.visibleBrand
+              : null;
+          await persistProductSearchResults({
+            searchId: manualQuery !== null ? manualSearchId : scanSearchId,
+            queryUsed: manualQuery ?? input.searchQueries[0],
+            detectedBrandName,
+            products: response.products,
+          });
+        }
+
+        if (manualQuery !== null) {
+          return jsonResponse(
+            { ...response, searchId: manualSearchId },
+            "error" in response ? 502 : 200,
+          );
         }
 
         return jsonResponse(response, "error" in response ? 502 : 200);

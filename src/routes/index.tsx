@@ -150,8 +150,18 @@ async function requestProductSearch(payload: unknown): Promise<ProductSearchOutc
   }
 }
 
-async function fetchProductsForItem(item: FashionScanItem): Promise<ProductSearchState> {
-  const outcome = await requestProductSearch({ item, searchQueries: item.searchQueries });
+async function fetchProductsForItem(
+  item: FashionScanItem,
+  scanSearchId: string | null,
+): Promise<ProductSearchState> {
+  // The scan's searchId (from /api/fashion-scan) is passed along additively so
+  // the server can link returned candidates to that search as alternatives
+  // rows. It does not change the visible results.
+  const outcome = await requestProductSearch({
+    item,
+    searchQueries: item.searchQueries,
+    ...(scanSearchId ? { searchId: scanSearchId } : {}),
+  });
   return outcome.state;
 }
 
@@ -406,7 +416,7 @@ function Scanner() {
     setProductSearches({});
   };
 
-  const loadProductSearches = (items: FashionScanItem[]) => {
+  const loadProductSearches = (items: FashionScanItem[], scanSearchId: string | null) => {
     const runId = productSearchRunRef.current + 1;
     productSearchRunRef.current = runId;
     setProductSearches(
@@ -415,7 +425,7 @@ function Scanner() {
 
     void Promise.all(
       items.map(async (item) => {
-        const nextState = await fetchProductsForItem(item);
+        const nextState = await fetchProductsForItem(item, scanSearchId);
         if (productSearchRunRef.current !== runId) return;
         setProductSearches((current) => ({ ...current, [item.id]: nextState }));
       }),
@@ -580,7 +590,7 @@ function Scanner() {
       const strongestItem = primaryItem(payload.result);
       setScanResult(payload.result);
       setSearchId(payload.searchId ?? null);
-      loadProductSearches(payload.result.items);
+      loadProductSearches(payload.result.items, payload.searchId ?? null);
 
       if (strongestItem.confidence < 0.35) {
         setAnalysisWarning("This scan is uncertain. Review the detected details before searching.");

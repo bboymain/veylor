@@ -339,9 +339,14 @@ describe("search-logging", () => {
         insertBody = JSON.parse(String(init?.body));
         return new Response(JSON.stringify([{ id: "manual-row-9" }]), { status: 201 });
       }
-      patchUrl = String(url);
-      patchMethod = init?.method ?? "";
-      return new Response(null, { status: 204 });
+      if (String(url).includes("/rest/v1/searches")) {
+        patchUrl = String(url);
+        patchMethod = init?.method ?? "";
+        return new Response(null, { status: 204 });
+      }
+      // Phase 7 additionally looks up products/alternatives on click; answer
+      // with no matching products so this test stays focused on searches.
+      return new Response("[]", { status: 200 });
     }) as typeof fetch;
 
     const searchResponse = await postHandlerOf(ProductSearchRoute)(
