@@ -3,8 +3,16 @@
 -- Regression rows remain as an immutable operational history. Acknowledgment
 -- records only when an alert was reviewed; it never deletes quality evidence
 -- and exposes no shopper identifiers, scans, item text, corrections, or images.
+--
+-- PostgreSQL cannot change a function's OUT row type with CREATE OR REPLACE.
+-- Drop the Stage 22 version before adding the regression_id output column.
 
-create or replace function public.get_model_quality_regressions(
+drop function if exists public.get_model_quality_regressions(
+  timestamptz,
+  boolean
+);
+
+create function public.get_model_quality_regressions(
   p_since timestamptz default (now() - interval '180 days'),
   p_unacknowledged_only boolean default true
 )
