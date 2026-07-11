@@ -12,6 +12,11 @@ import {
   type ParsedDataUrlImage,
   type SupportedImageMimeType,
 } from "../src/lib/image-data";
+import {
+  scoreBenchmarkItems,
+  type BenchmarkScores,
+  type ScoreCounts,
+} from "./fashion-benchmark-scoring";
 
 const ExpectedItemSchema = z
   .object({
@@ -64,6 +69,7 @@ type BenchmarkSuccess = {
   responseTimeMs: number;
   status: "success";
   returned: FashionScanResult;
+  scores: BenchmarkScores;
 };
 
 type BenchmarkFailure = {
@@ -90,6 +96,13 @@ export type BenchmarkRun = {
     cases: number;
     succeeded: number;
     failed: number;
+    successRate: number;
+    averageResponseTimeMs: number;
+    exact: number;
+    close: number;
+    wrong: number;
+    unknown: number;
+    brandHallucinations: number;
   };
   cases: BenchmarkCaseResult[];
 };
@@ -144,6 +157,7 @@ export async function runFashionBenchmark(options: {
         responseTimeMs: Math.round(performance.now() - start),
         status: "success",
         returned,
+        scores: scoreBenchmarkItems(benchmarkCase.expectedItems, returned.items),
       });
     } catch (error) {
       cases.push({
@@ -156,6 +170,21 @@ export async function runFashionBenchmark(options: {
   }
 
   const succeeded = cases.filter((result) => result.status === "success").length;
+  const scoreTotals = cases.reduce<ScoreCounts>(
+    (totals, result) => {
+      if (result.status !== "success") return totals;
+      totals.exact += result.scores.totals.exact;
+      totals.close += result.scores.totals.close;
+      totals.wrong += result.scores.totals.wrong;
+      totals.unknown += result.scores.totals.unknown;
+      totals.brandHallucinations += result.scores.totals.brandHallucinations;
+      return totals;
+    },
+    { exact: 0, close: 0, wrong: 0, unknown: 0, brandHallucinations: 0 },
+  );
+  const averageResponseTimeMs = Math.round(
+    cases.reduce((total, result) => total + result.responseTimeMs, 0) / cases.length,
+  );
   return {
     version: 1,
     model: options.model ?? GEMINI_MODEL,
@@ -166,6 +195,9 @@ export async function runFashionBenchmark(options: {
       cases: cases.length,
       succeeded,
       failed: cases.length - succeeded,
+      successRate: succeeded / cases.length,
+      averageResponseTimeMs,
+      ...scoreTotals,
     },
     cases,
   };
@@ -199,7 +231,12 @@ async function main() {
   const savedPath = await saveBenchmarkRun(run, outputPath);
 
   console.log(`Saved ${run.totals.cases} benchmark cases to ${savedPath}`);
-  console.log(`Succeeded: ${run.totals.succeeded}; failed: ${run.totals.failed}`);
+  console.log(
+    `Success: ${(run.totals.successRate * 100).toFixed(1)}%; average: ${run.totals.averageResponseTimeMs} ms`,
+  );
+  console.log(
+    `Fields: ${run.totals.exact} exact, ${run.totals.close} close, ${run.totals.wrong} wrong, ${run.totals.unknown} unknown; brand hallucinations: ${run.totals.brandHallucinations}`,
+  );
   if (run.totals.failed > 0) process.exitCode = 1;
 }
 

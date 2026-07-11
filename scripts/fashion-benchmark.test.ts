@@ -79,11 +79,22 @@ describe("fashion benchmark", () => {
       const outputPath = await saveBenchmarkRun(run, join(directory, "results", "run.json"));
       const saved = JSON.parse(await readFile(outputPath, "utf8")) as typeof run;
 
-      expect(saved.totals).toEqual({ cases: 1, succeeded: 1, failed: 0 });
+      expect(saved.totals).toMatchObject({
+        cases: 1,
+        succeeded: 1,
+        failed: 0,
+        successRate: 1,
+        exact: 4,
+        close: 0,
+        wrong: 0,
+        unknown: 2,
+        brandHallucinations: 0,
+      });
       expect(saved.cases[0]?.status).toBe("success");
       expect(saved.cases[0]?.expectedItems[0]?.category).toBe("jacket");
       if (saved.cases[0]?.status === "success") {
         expect(saved.cases[0].returned.items[0]?.material).toBe("leather");
+        expect(saved.cases[0].scores.items[0]?.returnedItemId).toBe("item-1");
         expect(saved.cases[0].responseTimeMs).toBeGreaterThanOrEqual(0);
       }
     } finally {
@@ -100,7 +111,17 @@ describe("fashion benchmark", () => {
         analyze: async () => returnedResult,
       });
 
-      expect(run.totals).toEqual({ cases: 1, succeeded: 0, failed: 1 });
+      expect(run.totals).toMatchObject({
+        cases: 1,
+        succeeded: 0,
+        failed: 1,
+        successRate: 0,
+        exact: 0,
+        close: 0,
+        wrong: 0,
+        unknown: 0,
+        brandHallucinations: 0,
+      });
       expect(run.cases[0]?.status).toBe("failure");
       if (run.cases[0]?.status === "failure") {
         expect(run.cases[0].error.message).toContain("look-001.jpg");
