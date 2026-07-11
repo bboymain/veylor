@@ -61,9 +61,7 @@ describe("Stage 10 database policy", () => {
 
   test("does not use AI confidence as verification evidence", async () => {
     const sql = (
-      await Bun.file(
-        "supabase/migrations/20260711203000_stage_10_evidence_verification.sql",
-      ).text()
+      await Bun.file("supabase/migrations/20260711203000_stage_10_evidence_verification.sql").text()
     ).toLowerCase();
 
     expect(sql).not.toContain("classification_confidence");
