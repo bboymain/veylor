@@ -67,10 +67,13 @@ export type LogScanAttemptInput =
       summary: string;
       detectedItems: FashionScanItem[];
       primarySearchQuery: string;
+      imageSha256?: string;
+      cacheSourceSearchId?: string;
     }
   | {
       status: "error";
       errorMessage: string;
+      imageSha256?: string;
     };
 
 /**
@@ -107,8 +110,8 @@ async function insertSearchRow(
 }
 
 /**
- * Records one row per scan attempt. Returns the new row's id on success, or
- * null when Supabase is not configured or the write fails. Never throws.
+ * Records one row per scan attempt. New AI rows remain cache-unverified by
+ * database default; Stage 10 will define evidence-based promotion.
  */
 export async function logScanAttempt(input: LogScanAttemptInput): Promise<string | null> {
   const row =
@@ -119,10 +122,13 @@ export async function logScanAttempt(input: LogScanAttemptInput): Promise<string
           summary: input.summary,
           detected_items: input.detectedItems,
           primary_search_query: input.primarySearchQuery,
+          image_sha256: input.imageSha256 ?? null,
+          cache_source_search_id: input.cacheSourceSearchId ?? null,
         }
       : {
           status: "error",
           error_message: sanitizeErrorMessage(input.errorMessage),
+          image_sha256: input.imageSha256 ?? null,
         };
 
   return insertSearchRow(row, "scan attempt");
@@ -135,14 +141,7 @@ export type LogManualSearchInput =
   | { status: "success"; query: string }
   | { status: "error"; query: string; errorMessage: string };
 
-/**
- * Records one row per manual product-search attempt in the existing searches
- * table, reusing existing columns: `model` is "manual" (scan rows carry the
- * Gemini model name instead), `primary_search_query` stores the typed query,
- * and `error_message` stores only the provider's generic, sanitized message —
- * never API keys, request URLs, or raw provider responses. Returns the new
- * row's id or null. Never throws.
- */
+/** Records one row per manual product-search attempt. */
 export async function logManualSearchAttempt(input: LogManualSearchInput): Promise<string | null> {
   const row = {
     status: input.status,
@@ -165,10 +164,7 @@ export type ProductClickInput = {
   tier: string;
 };
 
-/**
- * Records a product click against an existing search row. Returns whether
- * the write succeeded. Never throws.
- */
+/** Records a product click against an existing search row. */
 export async function recordProductClick(input: ProductClickInput): Promise<boolean> {
   const config = supabaseConfig();
   if (!config) return false;
