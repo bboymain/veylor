@@ -3,7 +3,9 @@ import { SearchIdSchema } from "./database-identifiers";
 
 describe("SearchIdSchema", () => {
   test("accepts Supabase UUID identifiers", () => {
-    expect(SearchIdSchema.safeParse("550e8400-e29b-41d4-a716-446655440000").success).toBe(true);
+    expect(SearchIdSchema.safeParse("550e8400-e29b-41d4-a716-446655440000").success).toBe(
+      true,
+    );
   });
 
   test("rejects empty, arbitrary, and SQL-like values", () => {
