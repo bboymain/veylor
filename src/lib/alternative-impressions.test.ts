@@ -21,7 +21,11 @@ describe("displayed product normalization", () => {
     expect(
       normalizedDisplayedProductUrls([
         baseProduct,
-        { ...baseProduct, id: "duplicate", productUrl: "https://example.com/item/1" },
+        {
+          ...baseProduct,
+          id: "duplicate",
+          productUrl: "https://example.com/item/1",
+        },
         { ...baseProduct, id: "mock", source: "mock" as const },
       ]),
     ).toEqual(["https://example.com/item/1"]);
@@ -29,7 +33,9 @@ describe("displayed product normalization", () => {
 
   test("drops malformed URLs", () => {
     expect(
-      normalizedDisplayedProductUrls([{ ...baseProduct, productUrl: "not-a-url" }]),
+      normalizedDisplayedProductUrls([
+        { ...baseProduct, productUrl: "not-a-url" },
+      ]),
     ).toEqual([]);
   });
 });
@@ -43,7 +49,10 @@ describe("impression RPC result parsing", () => {
 
   test("defaults malformed counts to zero", () => {
     expect(
-      parseImpressionRpcRow({ alternatives_updated: -1, products_refreshed: "3" }),
+      parseImpressionRpcRow({
+        alternatives_updated: -1,
+        products_refreshed: "3",
+      }),
     ).toEqual({ alternativesUpdated: 0, productsRefreshed: 0 });
   });
 });
