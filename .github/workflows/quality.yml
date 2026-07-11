@@ -32,7 +32,14 @@ jobs:
         run: bun run lint
 
       - name: Test
-        run: bun run test
+        run: bun run test 2>&1 | tee test-output.txt
+
+      - name: Upload test output
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-output
+          path: test-output.txt
 
       - name: Production build
         run: bun run build
