@@ -29,6 +29,7 @@ export type FashionScanResponse =
       result: FashionScanResult;
       image: { mimeType: string; byteLength: number };
       searchId?: string | null;
+      cache?: { hit: boolean };
     }
   | { error: { code: string; message: string }; searchId?: string | null };
 
