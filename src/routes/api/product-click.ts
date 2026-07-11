@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
 import { SearchIdSchema } from "@/lib/database-identifiers";
 import { jsonResponse } from "@/lib/fashion-scan";
-import { recordAlternativeClick } from "@/lib/product-persistence.server";
+import { verifyProductClickEvidence } from "@/lib/product-verification.server";
 import { recordProductClick } from "@/lib/search-logging.server";
 
 export const ProductClickInputSchema = z.object({
@@ -33,19 +33,19 @@ export const Route = createFileRoute("/api/product-click")({
           );
         }
 
-        // Best-effort: the product link already opened in a new tab regardless
-        // of whether this write succeeds, so always answer 200.
-        const saved = await recordProductClick(input.data);
+        // Preserve the legacy click fields while applying the Stage 10
+        // relationship-scoped verification rule through one server-only RPC.
+        // Both writes are best-effort because the merchant link has already
+        // opened and must never depend on analytics availability.
+        const [saved, verification] = await Promise.all([
+          recordProductClick(input.data),
+          verifyProductClickEvidence({
+            searchId: input.data.searchId,
+            productUrl: input.data.productUrl,
+          }),
+        ]);
 
-        // Also mark the matching alternatives row (phase 7) when the product
-        // can be resolved by normalized URL. Additive: never blocks the
-        // response, and the searches-table click fields above are kept.
-        await recordAlternativeClick({
-          searchId: input.data.searchId,
-          productUrl: input.data.productUrl,
-        });
-
-        return jsonResponse({ success: saved });
+        return jsonResponse({ success: saved, verification });
       },
     },
   },
