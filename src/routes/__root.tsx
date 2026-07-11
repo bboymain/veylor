@@ -7,6 +7,7 @@ import {
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
+import { ScanCorrectionCaptureBridge } from "@/lib/scan-correction-client";
 
 import appCss from "../styles.css?url";
 
@@ -94,6 +95,7 @@ function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   return (
     <QueryClientProvider client={queryClient}>
+      <ScanCorrectionCaptureBridge />
       <Outlet />
     </QueryClientProvider>
   );
