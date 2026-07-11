@@ -1,0 +1,57 @@
+{
+  "name": "fashion-scan-example",
+  "version": 1,
+  "description": "Placeholder manifest for the private fashion-image benchmark. Image paths point at a private, untracked directory; no real benchmark images are committed to this repository.",
+  "cases": [
+    {
+      "id": "example-outfit-01",
+      "imagePath": "private-benchmarks/example-outfit-01.jpg",
+      "description": "Streetwear outfit placeholder.",
+      "expectedItems": [
+        {
+          "category": "top",
+          "colors": ["black", "white"],
+          "pattern": "graphic print",
+          "material": "cotton",
+          "styles": ["streetwear", "casual"],
+          "visibleBrand": null
+        }
+      ]
+    },
+    {
+      "id": "example-outfit-02",
+      "imagePath": "private-benchmarks/example-outfit-02.jpg",
+      "description": "Denim outfit placeholder with two items; the second omits optional fields.",
+      "expectedItems": [
+        {
+          "category": "jeans",
+          "colors": ["blue"],
+          "pattern": null,
+          "material": "denim",
+          "styles": ["casual"],
+          "visibleBrand": "Levi's"
+        },
+        {
+          "category": "sneakers",
+          "colors": ["white"],
+          "styles": ["casual"]
+        }
+      ]
+    },
+    {
+      "id": "example-outfit-03",
+      "imagePath": "private-benchmarks/example-outfit-03.jpg",
+      "description": "Luxury handbag placeholder.",
+      "expectedItems": [
+        {
+          "category": "handbag",
+          "colors": ["black"],
+          "pattern": "quilted",
+          "material": "leather",
+          "styles": ["luxury"],
+          "visibleBrand": "Gucci"
+        }
+      ]
+    }
+  ]
+}

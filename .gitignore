@@ -26,6 +26,9 @@ dist-ssr
 benchmark/images/
 benchmark/results/
 benchmark/manifest.local.json
+benchmarks/fashion-scan/private-benchmarks/
+benchmarks/fashion-scan/results/
+benchmarks/fashion-scan/manifest.local.json
 
 # Editor directories and files
 .vscode/*
