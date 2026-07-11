@@ -5,6 +5,7 @@ import {
   useState,
   type ChangeEvent,
   type DragEvent,
+  type FormEvent,
   type PointerEvent as ReactPointerEvent,
 } from "react";
 import {
@@ -80,6 +81,9 @@ const SCAN_STAGES = [
   "Building searches",
 ];
 
+// Keep in sync with MAX_MANUAL_QUERY_LENGTH in /api/product-search.
+const MANUAL_QUERY_MAX_LENGTH = 200;
+
 function clamp(value: number, min: number, max: number) {
   return Math.min(Math.max(value, min), max);
 }
@@ -114,25 +118,35 @@ function reportProductClick(searchId: string | null, product: ProductSearchResul
   });
 }
 
-async function fetchProductsForItem(item: FashionScanItem): Promise<ProductSearchState> {
+async function requestProductSearch(payload: unknown): Promise<ProductSearchState> {
   try {
     const response = await fetch("/api/product-search", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ item, searchQueries: item.searchQueries }),
+      body: JSON.stringify(payload),
     });
-    const payload = (await response.json()) as ProductSearchResponse;
+    const result = (await response.json()) as ProductSearchResponse;
 
-    if ("error" in payload) {
-      return { status: "error", message: payload.error.message };
+    if ("error" in result) {
+      return { status: "error", message: result.error.message };
     }
-    if (payload.products.length === 0) {
+    if (result.products.length === 0) {
       return { status: "empty" };
     }
-    return { status: "success", products: payload.products };
+    return { status: "success", products: result.products };
   } catch {
     return { status: "error", message: "Shopping results are unavailable right now." };
   }
+}
+
+function fetchProductsForItem(item: FashionScanItem): Promise<ProductSearchState> {
+  return requestProductSearch({ item, searchQueries: item.searchQueries });
+}
+
+// Manual searches only hit /api/product-search — never the Gemini scan API —
+// so they keep working when scanning is unavailable or rate-limited.
+function fetchProductsForQuery(query: string): Promise<ProductSearchState> {
+  return requestProductSearch({ query });
 }
 
 function primaryItem(result: FashionScanResult) {
@@ -853,6 +867,8 @@ function Scanner() {
               )}
             </div>
 
+            <ManualSearchPanel searchId={searchId} />
+
             {history.length > 0 && (
               <HistoryPanel
                 history={history}
@@ -1148,6 +1164,68 @@ function ProductResults({
           )),
         )}
       </div>
+    </div>
+  );
+}
+
+// Manual shopping search: works with no photo, no scan, and no Gemini call,
+// so it stays usable when image analysis is down or rate-limited. Renders in
+// every scanner state and reuses ProductResults for loading/empty/error/
+// success states, card layout, safe links, and Supabase click tracking.
+function ManualSearchPanel({ searchId }: { searchId: string | null }) {
+  const [query, setQuery] = useState("");
+  const [search, setSearch] = useState<ProductSearchState | null>(null);
+  const runRef = useRef(0);
+
+  const trimmedQuery = query.trim();
+  const isLoading = search?.status === "loading";
+
+  const onSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!trimmedQuery || isLoading) return;
+
+    const runId = runRef.current + 1;
+    runRef.current = runId;
+    setSearch({ status: "loading" });
+    const nextState = await fetchProductsForQuery(trimmedQuery.slice(0, MANUAL_QUERY_MAX_LENGTH));
+    if (runRef.current !== runId) return;
+    setSearch(nextState);
+  };
+
+  return (
+    <div className="mt-8 border border-[rgba(201,169,106,0.18)] bg-navy p-6">
+      <div className="text-[10px] uppercase tracking-luxe text-gold/80">Manual Product Search</div>
+      <p className="mt-2 text-sm text-foreground/55">
+        Know what you want? Search shopping results directly — no photo or scan needed.
+      </p>
+
+      <form
+        onSubmit={(event) => void onSubmit(event)}
+        className="mt-4 flex flex-col gap-3 sm:flex-row"
+      >
+        <input
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+          maxLength={MANUAL_QUERY_MAX_LENGTH}
+          placeholder="Search for a clothing item, such as “black Wu-Tang graphic T-shirt”"
+          aria-label="Search for a clothing item"
+          className="min-h-12 flex-1 border border-[rgba(201,169,106,0.18)] bg-transparent px-4 py-3 text-sm text-foreground outline-none placeholder:text-foreground/35 focus:border-gold"
+        />
+        <button
+          type="submit"
+          disabled={!trimmedQuery || isLoading}
+          className="inline-flex min-h-12 items-center justify-center gap-2 bg-gold px-5 py-3 text-[10px] uppercase tracking-luxe text-navy transition-colors hover:bg-[var(--gold-soft)] disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          {isLoading ? (
+            <RotateCw className="h-3.5 w-3.5 animate-spin" />
+          ) : (
+            <Search className="h-3.5 w-3.5" />
+          )}
+          Search Products
+        </button>
+      </form>
+
+      {search && <ProductResults state={search} searchId={searchId} />}
     </div>
   );
 }
