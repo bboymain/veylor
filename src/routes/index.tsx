@@ -268,9 +268,17 @@ function updateBestQuery(item: FashionScanItem, patch: EditableItemPatch): Fashi
 function Index() {
   return (
     <div className="min-h-screen bg-navy text-foreground">
+      <a
+        href="#scanner"
+        className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-[60] focus:bg-gold focus:px-4 focus:py-2 focus:text-[11px] focus:uppercase focus:tracking-luxe focus:text-navy"
+      >
+        Skip to scanner
+      </a>
       <TopNav />
-      <Hero />
-      <Scanner />
+      <main id="main">
+        <Hero />
+        <Scanner />
+      </main>
       <Footer />
     </div>
   );
@@ -297,12 +305,14 @@ function TopNav() {
         <a href="#home" className="font-serif text-xl tracking-[0.2em] text-gold">
           VEYLOR
         </a>
-        <a
-          href="#scanner"
-          className="border-b border-gold pb-0.5 text-[11px] uppercase tracking-luxe text-gold"
-        >
-          Scan Outfit
-        </a>
+        <nav aria-label="Primary">
+          <a
+            href="#scanner"
+            className="inline-flex min-h-11 items-center border-b border-gold pb-0.5 text-[11px] uppercase tracking-luxe text-gold"
+          >
+            Scan Outfit
+          </a>
+        </nav>
       </div>
     </header>
   );
@@ -725,12 +735,15 @@ function Scanner() {
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
-                  className="flex h-full w-full flex-col items-center justify-center gap-5 bg-navy p-8 text-center transition-colors hover:bg-[rgba(201,169,106,0.06)]"
+                  className="flex h-full w-full flex-col items-center justify-center gap-5 bg-navy p-8 text-center transition-colors hover:bg-[rgba(201,169,106,0.06)] focus-visible:outline-offset-[-3px]"
                 >
-                  <ImageIcon className="h-12 w-12 text-gold/80" />
+                  <ImageIcon className="h-12 w-12 text-gold/80" aria-hidden="true" />
                   <span className="font-serif text-3xl text-foreground">Upload Photo</span>
                   <span className="max-w-xs text-sm leading-relaxed text-foreground/60">
-                    Choose a clear fashion image or drag one here.
+                    Choose a clear fashion image, or drag and drop one here.
+                  </span>
+                  <span className="text-[10px] uppercase tracking-luxe text-gold/60">
+                    JPG · PNG · WebP
                   </span>
                 </button>
               )}
@@ -1110,19 +1123,33 @@ function ProductResults({
 
   if (state.status === "empty") {
     return (
-      <div className="mt-5 border-t border-[rgba(201,169,106,0.12)] pt-5 text-sm text-foreground/50">
-        No products were found for this item.
+      <div className="mt-5 border-t border-[rgba(201,169,106,0.12)] pt-5">
+        <div className="flex gap-3 border border-[rgba(201,169,106,0.16)] p-4 text-sm text-foreground/60">
+          <Search className="mt-0.5 h-4 w-4 flex-shrink-0 text-gold/60" aria-hidden="true" />
+          <div>
+            <p>No products were found for this item.</p>
+            <p className="mt-1 text-foreground/40">
+              Try editing the item details, or search manually with different words.
+            </p>
+          </div>
+        </div>
       </div>
     );
   }
 
   if (state.status === "error") {
     return (
-      <div
-        role="alert"
-        className="mt-5 border-t border-[rgba(201,169,106,0.12)] pt-5 text-sm text-red-200/80"
-      >
-        {state.message}
+      <div role="alert" className="mt-5 border-t border-[rgba(201,169,106,0.12)] pt-5">
+        <div className="flex gap-3 border border-red-400/30 bg-red-950/20 p-4 text-sm text-red-100">
+          <AlertCircle className="mt-0.5 h-4 w-4 flex-shrink-0" aria-hidden="true" />
+          <div>
+            <p>{state.message}</p>
+            <p className="mt-1 text-red-100/70">
+              Shopping results will return once the search service is available. Your scan results
+              are unaffected.
+            </p>
+          </div>
+        </div>
       </div>
     );
   }
@@ -1150,16 +1177,23 @@ function ProductResults({
               target="_blank"
               rel="noopener noreferrer"
               onClick={() => reportProductClick(searchId, product)}
-              className="group overflow-hidden border border-[rgba(201,169,106,0.18)] bg-white/[0.02] transition-colors hover:border-gold/50"
+              className="group overflow-hidden border border-[rgba(201,169,106,0.18)] bg-white/[0.02] transition-colors hover:border-gold/50 focus-visible:border-gold/70"
             >
               <div className="aspect-[4/3] overflow-hidden bg-white/5">
-                {product.imageUrl && (
+                {product.imageUrl ? (
                   <img
                     src={product.imageUrl}
                     alt=""
                     loading="lazy"
                     className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
                   />
+                ) : (
+                  <div
+                    className="flex h-full w-full items-center justify-center"
+                    aria-hidden="true"
+                  >
+                    <ImageIcon className="h-8 w-8 text-gold/25" />
+                  </div>
                 )}
               </div>
               <div className="p-3">
@@ -1179,8 +1213,9 @@ function ProductResults({
                       {product.retailer}
                     </div>
                   </div>
-                  <ArrowRight className="h-3.5 w-3.5 text-gold" />
+                  <ArrowRight className="h-3.5 w-3.5 text-gold" aria-hidden="true" />
                 </div>
+                <span className="sr-only">Opens the retailer page in a new tab.</span>
               </div>
             </a>
           )),
@@ -1233,6 +1268,10 @@ function ManualSearchPanel() {
         className="mt-4 flex flex-col gap-3 sm:flex-row"
       >
         <input
+          type="search"
+          enterKeyHint="search"
+          autoComplete="off"
+          spellCheck={false}
           value={query}
           onChange={(event) => setQuery(event.target.value)}
           maxLength={MANUAL_QUERY_MAX_LENGTH}

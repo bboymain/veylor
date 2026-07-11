@@ -81,6 +81,37 @@
     font-feature-settings: "ss01", "cv11";
   }
   h1, h2, h3, h4 { font-family: var(--font-serif); letter-spacing: -0.01em; font-weight: 400; }
+
+  /* Keyboard users get a consistent, on-brand focus indicator everywhere.
+     Pointer interactions are unaffected (focus-visible only). */
+  :focus-visible {
+    outline: 2px solid var(--gold);
+    outline-offset: 2px;
+  }
+
+  /* Anchor targets stay visible below the fixed 4rem header. */
+  #home,
+  #scanner {
+    scroll-margin-top: 5rem;
+  }
+
+  /* Respect the OS "reduce motion" preference: keep the UI fully usable
+     while stopping the decorative scanline, fades, spins, and pulses. */
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+    .animate-scan,
+    .animate-fade-up,
+    .animate-spin,
+    .animate-pulse {
+      animation: none;
+    }
+    .animate-fade-up {
+      opacity: 1;
+      transform: none;
+    }
+  }
 }
 
 @layer utilities {
