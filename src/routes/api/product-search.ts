@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
+import { SearchIdSchema } from "@/lib/database-identifiers";
 import { jsonResponse, type FashionScanItem } from "@/lib/fashion-scan";
 import type { ProductSearchInput } from "@/lib/product-search";
 import { executeProductSearch, ProductSearchInputSchema } from "@/lib/product-search-provider";
@@ -18,8 +19,8 @@ const ManualSearchInputSchema = z.object({
 // Additive, optional: the scan UI may include the searchId returned by
 // /api/fashion-scan alongside scan-shaped input so returned candidates can be
 // linked to that search as alternatives rows. Absent for older clients.
-const ScanSearchIdSchema = z.object({
-  searchId: z.string().min(1).optional(),
+export const ScanSearchIdSchema = z.object({
+  searchId: SearchIdSchema.optional(),
 });
 
 /** Confidence floor matching the UI's "visible brand" display threshold. */
