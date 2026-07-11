@@ -748,12 +748,17 @@ function Scanner() {
               )}
 
               {status === "scanning" && (
-                <>
+                <div className="pointer-events-none absolute inset-0" aria-hidden="true">
                   <div className="absolute inset-0 bg-navy/35 backdrop-blur-[1px]" />
+                  <div className="scan-grid absolute inset-0" />
                   <div className="absolute inset-0 overflow-hidden">
-                    <div className="scanline animate-scan absolute inset-x-0 h-32 opacity-80" />
+                    <div className="scan-beam absolute inset-0" />
                   </div>
-                </>
+                  <div className="scan-frame-pulse absolute inset-0" />
+                  <div className="absolute bottom-4 left-1/2 -translate-x-1/2 animate-pulse bg-navy/85 px-3 py-1.5 text-[9px] uppercase tracking-luxe text-gold">
+                    Analyzing outfit
+                  </div>
+                </div>
               )}
 
               <Corner className="left-3 top-3" />
