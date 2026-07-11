@@ -16,7 +16,10 @@ function supabaseConfig(): SupabaseConfig | null {
   return { url: url.replace(/\/+$/, ""), serviceRoleKey };
 }
 
-function headers(config: SupabaseConfig, prefer = "return=representation"): HeadersInit {
+function headers(
+  config: SupabaseConfig,
+  prefer = "return=representation",
+): HeadersInit {
   return {
     apikey: config.serviceRoleKey,
     authorization: `Bearer ${config.serviceRoleKey}`,
@@ -25,7 +28,9 @@ function headers(config: SupabaseConfig, prefer = "return=representation"): Head
   };
 }
 
-export function normalizedDisplayedProductUrls(products: ProductSearchResult[]): string[] {
+export function normalizedDisplayedProductUrls(
+  products: ProductSearchResult[],
+): string[] {
   const urls = new Set<string>();
   for (const product of products) {
     if (product.source !== "serpapi") continue;
@@ -45,10 +50,13 @@ export type AlternativeImpressionResult = {
   productsRefreshed: number;
 };
 
-export function parseImpressionRpcRow(row: ImpressionRpcRow): AlternativeImpressionResult {
+export function parseImpressionRpcRow(
+  row: ImpressionRpcRow,
+): AlternativeImpressionResult {
   return {
     alternativesUpdated:
-      typeof row.alternatives_updated === "number" && row.alternatives_updated >= 0
+      typeof row.alternatives_updated === "number" &&
+      row.alternatives_updated >= 0
         ? row.alternatives_updated
         : 0,
     productsRefreshed:
@@ -78,13 +86,19 @@ export async function recordDisplayedAlternativeImpressions(input: {
       { headers: headers(config) },
     );
     if (!lookup.ok) {
-      console.error(`[alternative-impressions] Product lookup failed (status ${lookup.status}).`);
+      console.error(
+        `[alternative-impressions] Product lookup failed (status ${lookup.status}).`,
+      );
       return empty;
     }
 
     const rows = (await lookup.json()) as Array<{ id?: unknown }>;
     const productIds = [
-      ...new Set(rows.map((row) => row.id).filter((id): id is string => typeof id === "string")),
+      ...new Set(
+        rows
+          .map((row) => row.id)
+          .filter((id): id is string => typeof id === "string"),
+      ),
     ];
     if (productIds.length === 0) return empty;
 
