@@ -118,7 +118,14 @@ function reportProductClick(searchId: string | null, product: ProductSearchResul
   });
 }
 
-async function requestProductSearch(payload: unknown): Promise<ProductSearchState> {
+type ProductSearchOutcome = {
+  state: ProductSearchState;
+  // Only manual searches receive a searchId here (the route logs them); the
+  // scan path keeps using the searchId returned by /api/fashion-scan.
+  searchId: string | null;
+};
+
+async function requestProductSearch(payload: unknown): Promise<ProductSearchOutcome> {
   try {
     const response = await fetch("/api/product-search", {
       method: "POST",
@@ -126,26 +133,31 @@ async function requestProductSearch(payload: unknown): Promise<ProductSearchStat
       body: JSON.stringify(payload),
     });
     const result = (await response.json()) as ProductSearchResponse;
+    const searchId = typeof result.searchId === "string" ? result.searchId : null;
 
     if ("error" in result) {
-      return { status: "error", message: result.error.message };
+      return { state: { status: "error", message: result.error.message }, searchId };
     }
     if (result.products.length === 0) {
-      return { status: "empty" };
+      return { state: { status: "empty" }, searchId };
     }
-    return { status: "success", products: result.products };
+    return { state: { status: "success", products: result.products }, searchId };
   } catch {
-    return { status: "error", message: "Shopping results are unavailable right now." };
+    return {
+      state: { status: "error", message: "Shopping results are unavailable right now." },
+      searchId: null,
+    };
   }
 }
 
-function fetchProductsForItem(item: FashionScanItem): Promise<ProductSearchState> {
-  return requestProductSearch({ item, searchQueries: item.searchQueries });
+async function fetchProductsForItem(item: FashionScanItem): Promise<ProductSearchState> {
+  const outcome = await requestProductSearch({ item, searchQueries: item.searchQueries });
+  return outcome.state;
 }
 
 // Manual searches only hit /api/product-search — never the Gemini scan API —
 // so they keep working when scanning is unavailable or rate-limited.
-function fetchProductsForQuery(query: string): Promise<ProductSearchState> {
+function fetchProductsForQuery(query: string): Promise<ProductSearchOutcome> {
   return requestProductSearch({ query });
 }
 
@@ -867,7 +879,7 @@ function Scanner() {
               )}
             </div>
 
-            <ManualSearchPanel searchId={searchId} />
+            <ManualSearchPanel />
 
             {history.length > 0 && (
               <HistoryPanel
@@ -1172,9 +1184,13 @@ function ProductResults({
 // so it stays usable when image analysis is down or rate-limited. Renders in
 // every scanner state and reuses ProductResults for loading/empty/error/
 // success states, card layout, safe links, and Supabase click tracking.
-function ManualSearchPanel({ searchId }: { searchId: string | null }) {
+function ManualSearchPanel() {
   const [query, setQuery] = useState("");
   const [search, setSearch] = useState<ProductSearchState | null>(null);
+  // The manual panel tracks its own searchId (from the manual search's own
+  // Supabase log row) and never reuses an image scan's searchId, so manual
+  // clicks always update the matching manual row.
+  const [manualSearchId, setManualSearchId] = useState<string | null>(null);
   const runRef = useRef(0);
 
   const trimmedQuery = query.trim();
@@ -1187,9 +1203,12 @@ function ManualSearchPanel({ searchId }: { searchId: string | null }) {
     const runId = runRef.current + 1;
     runRef.current = runId;
     setSearch({ status: "loading" });
-    const nextState = await fetchProductsForQuery(trimmedQuery.slice(0, MANUAL_QUERY_MAX_LENGTH));
+    // Each new manual search replaces the prior manual searchId.
+    setManualSearchId(null);
+    const outcome = await fetchProductsForQuery(trimmedQuery.slice(0, MANUAL_QUERY_MAX_LENGTH));
     if (runRef.current !== runId) return;
-    setSearch(nextState);
+    setSearch(outcome.state);
+    setManualSearchId(outcome.searchId);
   };
 
   return (
@@ -1225,7 +1244,7 @@ function ManualSearchPanel({ searchId }: { searchId: string | null }) {
         </button>
       </form>
 
-      {search && <ProductResults state={search} searchId={searchId} />}
+      {search && <ProductResults state={search} searchId={manualSearchId} />}
     </div>
   );
 }

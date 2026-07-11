@@ -3,6 +3,7 @@ import { z } from "zod";
 import { jsonResponse, type FashionScanItem } from "@/lib/fashion-scan";
 import type { ProductSearchInput } from "@/lib/product-search";
 import { executeProductSearch, ProductSearchInputSchema } from "@/lib/product-search-provider";
+import { logManualSearchAttempt } from "@/lib/search-logging.server";
 import { resolveProductSearchProvider } from "@/lib/serpapi-product-search.server";
 
 export const MAX_MANUAL_QUERY_LENGTH = 200;
@@ -54,21 +55,41 @@ export const Route = createFileRoute("/api/product-search")({
         // Scan-shaped input is tried first so existing behavior is unchanged;
         // otherwise accept a manual `{ query }` payload.
         let input: ProductSearchInput;
+        let manualQuery: string | null = null;
         const scanInput = ProductSearchInputSchema.safeParse(body);
         if (scanInput.success) {
           input = scanInput.data;
         } else {
           const manualInput = ManualSearchInputSchema.safeParse(body);
           if (!manualInput.success) {
+            // Invalid/empty manual queries are rejected before any logging.
             return jsonResponse(
               { error: { code: "INVALID_REQUEST", message: "Invalid product-search input." } },
               400,
             );
           }
-          input = manualSearchInput(manualInput.data.query);
+          manualQuery = manualInput.data.query;
+          input = manualSearchInput(manualQuery);
         }
 
         const response = await executeProductSearch(resolveProductSearchProvider(), input);
+
+        // Only manual searches are logged here (one row per attempt); scan-based
+        // searches already get their row from /api/fashion-scan, so logging them
+        // again would create duplicates. Logging is best-effort and never blocks
+        // or breaks the product results.
+        if (manualQuery !== null) {
+          const searchId =
+            "error" in response
+              ? await logManualSearchAttempt({
+                  status: "error",
+                  query: manualQuery,
+                  errorMessage: response.error.message,
+                })
+              : await logManualSearchAttempt({ status: "success", query: manualQuery });
+          return jsonResponse({ ...response, searchId }, "error" in response ? 502 : 200);
+        }
+
         return jsonResponse(response, "error" in response ? 502 : 200);
       },
     },
