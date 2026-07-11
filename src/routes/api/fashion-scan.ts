@@ -1,7 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { analyzeFashionWithGemini, mapGeminiError } from "@/lib/gemini-fashion";
+import { analyzeFashionWithGemini, GEMINI_MODEL, mapGeminiError } from "@/lib/gemini-fashion";
 import { jsonResponse } from "@/lib/fashion-scan";
 import { parseDataUrlImage } from "@/lib/image-data";
+import { logScanAttempt } from "@/lib/search-logging.server";
 
 type ServerEnv = Record<string, string | undefined>;
 
@@ -39,23 +40,45 @@ export const Route = createFileRoute("/api/fashion-scan")({
           });
 
           if (result.items.length === 0) {
+            const searchId = await logScanAttempt({
+              status: "error",
+              errorMessage: "No clothing or accessories were detected.",
+            });
             return jsonResponse(
               {
                 error: {
                   code: "NO_FASHION_ITEM",
                   message: "No clothing or accessories were detected. Try a clearer photo.",
                 },
+                searchId,
               },
               422,
             );
           }
 
+          const strongestItem = result.items.reduce((best, item) =>
+            item.confidence > best.confidence ? item : best,
+          );
+          const searchId = await logScanAttempt({
+            status: "success",
+            model: GEMINI_MODEL,
+            summary: result.summary,
+            detectedItems: result.items,
+            primarySearchQuery: strongestItem.searchQueries[0] ?? "",
+          });
+
           return jsonResponse({
             result,
             image: { mimeType: image.mimeType, byteLength: image.byteLength },
+            searchId,
           });
         } catch (error) {
-          return mapGeminiError(error);
+          const errorResponse = mapGeminiError(error);
+          const errorPayload = (await errorResponse.clone().json()) as {
+            error: { message: string };
+          };
+          await logScanAttempt({ status: "error", errorMessage: errorPayload.error.message });
+          return errorResponse;
         }
       },
     },

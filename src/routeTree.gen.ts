@@ -10,11 +10,23 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ApiProductSearchRouteImport } from './routes/api/product-search'
+import { Route as ApiProductClickRouteImport } from './routes/api/product-click'
 import { Route as ApiFashionScanRouteImport } from './routes/api/fashion-scan'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiProductSearchRoute = ApiProductSearchRouteImport.update({
+  id: '/api/product-search',
+  path: '/api/product-search',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiProductClickRoute = ApiProductClickRouteImport.update({
+  id: '/api/product-click',
+  path: '/api/product-click',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiFashionScanRoute = ApiFashionScanRouteImport.update({
@@ -26,27 +38,44 @@ const ApiFashionScanRoute = ApiFashionScanRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/api/fashion-scan': typeof ApiFashionScanRoute
+  '/api/product-click': typeof ApiProductClickRoute
+  '/api/product-search': typeof ApiProductSearchRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/api/fashion-scan': typeof ApiFashionScanRoute
+  '/api/product-click': typeof ApiProductClickRoute
+  '/api/product-search': typeof ApiProductSearchRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/api/fashion-scan': typeof ApiFashionScanRoute
+  '/api/product-click': typeof ApiProductClickRoute
+  '/api/product-search': typeof ApiProductSearchRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/api/fashion-scan'
+  fullPaths:
+    | '/'
+    | '/api/fashion-scan'
+    | '/api/product-click'
+    | '/api/product-search'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/api/fashion-scan'
-  id: '__root__' | '/' | '/api/fashion-scan'
+  to: '/' | '/api/fashion-scan' | '/api/product-click' | '/api/product-search'
+  id:
+    | '__root__'
+    | '/'
+    | '/api/fashion-scan'
+    | '/api/product-click'
+    | '/api/product-search'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ApiFashionScanRoute: typeof ApiFashionScanRoute
+  ApiProductClickRoute: typeof ApiProductClickRoute
+  ApiProductSearchRoute: typeof ApiProductSearchRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -56,6 +85,20 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/product-search': {
+      id: '/api/product-search'
+      path: '/api/product-search'
+      fullPath: '/api/product-search'
+      preLoaderRoute: typeof ApiProductSearchRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/product-click': {
+      id: '/api/product-click'
+      path: '/api/product-click'
+      fullPath: '/api/product-click'
+      preLoaderRoute: typeof ApiProductClickRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/fashion-scan': {
@@ -71,6 +114,8 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ApiFashionScanRoute: ApiFashionScanRoute,
+  ApiProductClickRoute: ApiProductClickRoute,
+  ApiProductSearchRoute: ApiProductSearchRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
@@ -82,6 +127,4 @@ declare module '@tanstack/react-start' {
   interface Register {
     ssr: true
     router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
+    config: Awaited<ReturnType<

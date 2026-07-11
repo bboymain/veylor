@@ -28,8 +28,9 @@ export type FashionScanResponse =
   | {
       result: FashionScanResult;
       image: { mimeType: string; byteLength: number };
+      searchId?: string | null;
     }
-  | { error: { code: string; message: string } };
+  | { error: { code: string; message: string }; searchId?: string | null };
 
 export function jsonResponse(payload: unknown, status = 200) {
   return Response.json(payload, { status });
