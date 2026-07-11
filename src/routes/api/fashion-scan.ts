@@ -2,6 +2,11 @@ import { createFileRoute } from "@tanstack/react-router";
 import { analyzeFashionWithGemini, GEMINI_MODEL, mapGeminiError } from "@/lib/gemini-fashion";
 import { jsonResponse } from "@/lib/fashion-scan";
 import { parseDataUrlImage } from "@/lib/image-data";
+import {
+  findVerifiedScanCacheHit,
+  fingerprintImage,
+  markVerifiedScanCacheHit,
+} from "@/lib/scan-cache.server";
 import { logScanAttempt } from "@/lib/search-logging.server";
 
 type ServerEnv = Record<string, string | undefined>;
@@ -15,6 +20,7 @@ export const Route = createFileRoute("/api/fashion-scan")({
     handlers: {
       POST: async ({ request }) => {
         const env = serverEnv();
+        let imageSha256: string | undefined;
 
         try {
           const contentType = request.headers.get("content-type") ?? "";
@@ -34,6 +40,31 @@ export const Route = createFileRoute("/api/fashion-scan")({
           }
 
           const image = parseDataUrlImage(body.imageDataUrl);
+          imageSha256 = fingerprintImage(image);
+
+          const cacheHit = await findVerifiedScanCacheHit(imageSha256);
+          if (cacheHit) {
+            const strongestItem = cacheHit.result.items.reduce((best, item) =>
+              item.confidence > best.confidence ? item : best,
+            );
+            const searchId = await logScanAttempt({
+              status: "success",
+              model: `cache:${cacheHit.sourceModel}`,
+              summary: cacheHit.result.summary,
+              detectedItems: cacheHit.result.items,
+              primarySearchQuery: strongestItem.searchQueries[0] ?? "",
+              imageSha256,
+              cacheSourceSearchId: cacheHit.sourceSearchId,
+            });
+            await markVerifiedScanCacheHit(cacheHit.sourceSearchId);
+
+            return jsonResponse({
+              result: cacheHit.result,
+              image: { mimeType: image.mimeType, byteLength: image.byteLength },
+              searchId,
+              cache: { hit: true },
+            });
+          }
 
           const result = await analyzeFashionWithGemini(image, {
             apiKey: env.GEMINI_API_KEY,
@@ -43,6 +74,7 @@ export const Route = createFileRoute("/api/fashion-scan")({
             const searchId = await logScanAttempt({
               status: "error",
               errorMessage: "No clothing or accessories were detected.",
+              imageSha256,
             });
             return jsonResponse(
               {
@@ -65,19 +97,25 @@ export const Route = createFileRoute("/api/fashion-scan")({
             summary: result.summary,
             detectedItems: result.items,
             primarySearchQuery: strongestItem.searchQueries[0] ?? "",
+            imageSha256,
           });
 
           return jsonResponse({
             result,
             image: { mimeType: image.mimeType, byteLength: image.byteLength },
             searchId,
+            cache: { hit: false },
           });
         } catch (error) {
           const errorResponse = mapGeminiError(error);
           const errorPayload = (await errorResponse.clone().json()) as {
             error: { message: string };
           };
-          await logScanAttempt({ status: "error", errorMessage: errorPayload.error.message });
+          await logScanAttempt({
+            status: "error",
+            errorMessage: errorPayload.error.message,
+            imageSha256,
+          });
           return errorResponse;
         }
       },
