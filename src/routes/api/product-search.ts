@@ -1,6 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
 import { recordDisplayedAlternativeImpressions } from "@/lib/alternative-impressions.server";
+import {
+  attachAnonymousShopperCookie,
+  resolveAnonymousShopper,
+} from "@/lib/anonymous-shopper.server";
 import { SearchIdSchema } from "@/lib/database-identifiers";
 import { jsonResponse, type FashionScanItem } from "@/lib/fashion-scan";
 import type { ProductSearchInput, ProductSearchResponse } from "@/lib/product-search";
@@ -15,27 +19,16 @@ import { resolveProductSearchProvider } from "@/lib/serpapi-product-search.serve
 
 export const MAX_MANUAL_QUERY_LENGTH = 200;
 
-// Manual searches send only a typed clothing description — no Gemini scan is
-// involved. The query is trimmed, must be non-empty, and is length-limited.
 const ManualSearchInputSchema = z.object({
   query: z.string().trim().min(1).max(MAX_MANUAL_QUERY_LENGTH),
 });
 
-// Additive, optional: the scan UI may include the searchId returned by
-// /api/fashion-scan alongside scan-shaped input so returned candidates can be
-// linked to that search as alternatives rows. Absent for older clients.
 export const ScanSearchIdSchema = z.object({
   searchId: SearchIdSchema.optional(),
 });
 
-/** Confidence floor matching the UI's "visible brand" display threshold. */
 const DETECTED_BRAND_MIN_CONFIDENCE = 0.5;
 
-/**
- * Wraps a manual query in the provider input contract. The SerpApi provider
- * only reads `searchQueries[0]`; the synthetic item exists so the mock
- * fallback (used when SERPAPI_API_KEY is missing) still has fields to render.
- */
 function manualSearchInput(query: string): ProductSearchInput {
   const item: FashionScanItem = {
     id: "manual-search",
@@ -59,16 +52,20 @@ export const Route = createFileRoute("/api/product-search")({
   server: {
     handlers: {
       POST: async ({ request }) => {
+        const shopper = resolveAnonymousShopper(request);
         const contentType = request.headers.get("content-type") ?? "";
         if (!contentType.includes("application/json")) {
-          return jsonResponse(
-            {
-              error: {
-                code: "INVALID_REQUEST",
-                message: "Expected a JSON request.",
+          return attachAnonymousShopperCookie(
+            jsonResponse(
+              {
+                error: {
+                  code: "INVALID_REQUEST",
+                  message: "Expected a JSON request.",
+                },
               },
-            },
-            415,
+              415,
+            ),
+            shopper,
           );
         }
 
@@ -87,14 +84,17 @@ export const Route = createFileRoute("/api/product-search")({
         } else {
           const manualInput = ManualSearchInputSchema.safeParse(body);
           if (!manualInput.success) {
-            return jsonResponse(
-              {
-                error: {
-                  code: "INVALID_REQUEST",
-                  message: "Invalid product-search input.",
+            return attachAnonymousShopperCookie(
+              jsonResponse(
+                {
+                  error: {
+                    code: "INVALID_REQUEST",
+                    message: "Invalid product-search input.",
+                  },
                 },
-              },
-              400,
+                400,
+              ),
+              shopper,
             );
           }
           manualQuery = manualInput.data.query;
@@ -123,10 +123,10 @@ export const Route = createFileRoute("/api/product-search")({
 
         let response: ProductSearchResponse = providerResponse;
         if (!("error" in providerResponse)) {
-          // Stage 12 uses only persisted verification, freshness, impressions,
-          // and clicks. It preserves provider order when evidence is missing and
-          // limits any result to moving upward by at most two positions.
-          const rankedProducts = await rankProductSearchResults(providerResponse.products);
+          const rankedProducts = await rankProductSearchResults(
+            providerResponse.products,
+            shopper.id,
+          );
           response = { products: rankedProducts };
 
           const detectedBrandName =
@@ -151,14 +151,15 @@ export const Route = createFileRoute("/api/product-search")({
           });
         }
 
-        if (manualQuery !== null) {
-          return jsonResponse(
-            { ...response, searchId: manualSearchId },
-            "error" in response ? 502 : 200,
-          );
-        }
+        const resultResponse =
+          manualQuery !== null
+            ? jsonResponse(
+                { ...response, searchId: manualSearchId },
+                "error" in response ? 502 : 200,
+              )
+            : jsonResponse(response, "error" in response ? 502 : 200);
 
-        return jsonResponse(response, "error" in response ? 502 : 200);
+        return attachAnonymousShopperCookie(resultResponse, shopper);
       },
     },
   },
