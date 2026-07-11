@@ -1,5 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
+import {
+  attachAnonymousShopperCookie,
+  recordShopperPreferenceClick,
+  resolveAnonymousShopper,
+} from "@/lib/anonymous-shopper.server";
 import { SearchIdSchema } from "@/lib/database-identifiers";
 import { jsonResponse } from "@/lib/fashion-scan";
 import { verifyProductClickEvidence } from "@/lib/product-verification.server";
@@ -17,26 +22,29 @@ export const Route = createFileRoute("/api/product-click")({
   server: {
     handlers: {
       POST: async ({ request }) => {
+        const shopper = resolveAnonymousShopper(request);
         const contentType = request.headers.get("content-type") ?? "";
         if (!contentType.includes("application/json")) {
-          return jsonResponse(
-            { error: { code: "INVALID_REQUEST", message: "Expected a JSON request." } },
-            415,
+          return attachAnonymousShopperCookie(
+            jsonResponse(
+              { error: { code: "INVALID_REQUEST", message: "Expected a JSON request." } },
+              415,
+            ),
+            shopper,
           );
         }
 
         const input = ProductClickInputSchema.safeParse(await request.json());
         if (!input.success) {
-          return jsonResponse(
-            { error: { code: "INVALID_REQUEST", message: "Invalid product-click input." } },
-            400,
+          return attachAnonymousShopperCookie(
+            jsonResponse(
+              { error: { code: "INVALID_REQUEST", message: "Invalid product-click input." } },
+              400,
+            ),
+            shopper,
           );
         }
 
-        // Preserve the legacy click fields while applying the Stage 10
-        // relationship-scoped verification rule through one server-only RPC.
-        // Both writes are best-effort because the merchant link has already
-        // opened and must never depend on analytics availability.
         const [saved, verification] = await Promise.all([
           recordProductClick(input.data),
           verifyProductClickEvidence({
@@ -45,7 +53,19 @@ export const Route = createFileRoute("/api/product-click")({
           }),
         ]);
 
-        return jsonResponse({ success: saved, verification });
+        // Preference learning is intentionally sequenced after verification.
+        // The database RPC independently requires the clicked alternative to
+        // belong to this search and already be marked clicked.
+        const preferenceLearned = await recordShopperPreferenceClick({
+          profileId: shopper.id,
+          searchId: input.data.searchId,
+          productUrl: input.data.productUrl,
+        });
+
+        return attachAnonymousShopperCookie(
+          jsonResponse({ success: saved, verification, preferenceLearned }),
+          shopper,
+        );
       },
     },
   },
