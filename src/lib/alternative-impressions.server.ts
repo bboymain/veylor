@@ -70,7 +70,9 @@ export async function recordDisplayedAlternativeImpressions(input: {
   if (normalizedUrls.length === 0) return empty;
 
   try {
-    const filter = normalizedUrls.map((url) => `"${url.replaceAll('"', '\\"')}"`).join(",");
+    const filter = normalizedUrls
+      .map((url) => `"${url.replaceAll('"', '\\"')}"`)
+      .join(",");
     const lookup = await fetch(
       `${config.url}/rest/v1/products?select=id&normalized_product_url=in.(${encodeURIComponent(filter)})`,
       { headers: headers(config) },
@@ -86,17 +88,22 @@ export async function recordDisplayedAlternativeImpressions(input: {
     ];
     if (productIds.length === 0) return empty;
 
-    const response = await fetch(`${config.url}/rest/v1/rpc/record_alternative_impressions`, {
-      method: "POST",
-      headers: headers(config),
-      body: JSON.stringify({
-        p_search_id: input.searchId,
-        p_product_ids: productIds,
-        p_shown_at: new Date().toISOString(),
-      }),
-    });
+    const response = await fetch(
+      `${config.url}/rest/v1/rpc/record_alternative_impressions`,
+      {
+        method: "POST",
+        headers: headers(config),
+        body: JSON.stringify({
+          p_search_id: input.searchId,
+          p_product_ids: productIds,
+          p_shown_at: new Date().toISOString(),
+        }),
+      },
+    );
     if (!response.ok) {
-      console.error(`[alternative-impressions] Impression write failed (status ${response.status}).`);
+      console.error(
+        `[alternative-impressions] Impression write failed (status ${response.status}).`,
+      );
       return empty;
     }
 
