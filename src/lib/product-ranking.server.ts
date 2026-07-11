@@ -1,3 +1,8 @@
+import {
+  loadShopperPreferences,
+  shopperPreferenceScore,
+  type ShopperPreferences,
+} from "./anonymous-shopper.server";
 import type { ProductSearchResult } from "./product-search";
 import { normalizeProductUrl } from "./product-persistence.server";
 
@@ -90,21 +95,24 @@ export function productEvidenceScore(evidence: ProductRankingEvidence | undefine
 }
 
 /**
- * Stable evidence ranking with a strict maximum upward displacement. A result
- * can move up at most two positions from provider order, even with strong
- * evidence. Equal scores preserve provider order.
+ * Stable evidence ranking with a strict maximum upward displacement. Global
+ * evidence remains dominant; anonymous preferences contribute at most one
+ * point and cannot move any result upward by more than the existing cap.
  */
 export function rankProductsWithEvidence(
   products: ProductSearchResult[],
   evidenceByUrl: Map<string, ProductRankingEvidence>,
   maxUpwardDisplacement = 2,
+  preferences: ShopperPreferences | null = null,
 ): ProductSearchResult[] {
   const remaining = products.map((product, originalIndex) => {
     const normalizedUrl = normalizeProductUrl(product.productUrl);
     return {
       product,
       originalIndex,
-      score: normalizedUrl ? productEvidenceScore(evidenceByUrl.get(normalizedUrl)) : 0,
+      score:
+        (normalizedUrl ? productEvidenceScore(evidenceByUrl.get(normalizedUrl)) : 0) +
+        shopperPreferenceScore(product, preferences),
     };
   });
 
@@ -164,10 +172,17 @@ async function loadRankingEvidence(
 
 export async function rankProductSearchResults(
   products: ProductSearchResult[],
+  shopperProfileId: string | null = null,
 ): Promise<ProductSearchResult[]> {
   if (products.length < 2 || products.every((product) => product.source !== "serpapi")) {
     return products;
   }
-  const evidence = await loadRankingEvidence(products);
-  return evidence.size === 0 ? products : rankProductsWithEvidence(products, evidence);
+
+  const [evidence, preferences] = await Promise.all([
+    loadRankingEvidence(products),
+    shopperProfileId ? loadShopperPreferences(shopperProfileId) : Promise.resolve(null),
+  ]);
+
+  if (evidence.size === 0 && !preferences) return products;
+  return rankProductsWithEvidence(products, evidence, 2, preferences);
 }
