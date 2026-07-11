@@ -4,7 +4,10 @@ import { recordDisplayedAlternativeImpressions } from "@/lib/alternative-impress
 import { SearchIdSchema } from "@/lib/database-identifiers";
 import { jsonResponse, type FashionScanItem } from "@/lib/fashion-scan";
 import type { ProductSearchInput } from "@/lib/product-search";
-import { executeProductSearch, ProductSearchInputSchema } from "@/lib/product-search-provider";
+import {
+  executeProductSearch,
+  ProductSearchInputSchema,
+} from "@/lib/product-search-provider";
 import { persistProductSearchResults } from "@/lib/product-persistence.server";
 import { logManualSearchAttempt } from "@/lib/search-logging.server";
 import { resolveProductSearchProvider } from "@/lib/serpapi-product-search.server";
@@ -58,7 +61,12 @@ export const Route = createFileRoute("/api/product-search")({
         const contentType = request.headers.get("content-type") ?? "";
         if (!contentType.includes("application/json")) {
           return jsonResponse(
-            { error: { code: "INVALID_REQUEST", message: "Expected a JSON request." } },
+            {
+              error: {
+                code: "INVALID_REQUEST",
+                message: "Expected a JSON request.",
+              },
+            },
             415,
           );
         }
@@ -74,13 +82,20 @@ export const Route = createFileRoute("/api/product-search")({
         if (scanInput.success) {
           input = scanInput.data;
           const withSearchId = ScanSearchIdSchema.safeParse(body);
-          scanSearchId = withSearchId.success ? (withSearchId.data.searchId ?? null) : null;
+          scanSearchId = withSearchId.success
+            ? (withSearchId.data.searchId ?? null)
+            : null;
         } else {
           const manualInput = ManualSearchInputSchema.safeParse(body);
           if (!manualInput.success) {
             // Invalid/empty manual queries are rejected before any logging.
             return jsonResponse(
-              { error: { code: "INVALID_REQUEST", message: "Invalid product-search input." } },
+              {
+                error: {
+                  code: "INVALID_REQUEST",
+                  message: "Invalid product-search input.",
+                },
+              },
               400,
             );
           }
@@ -88,7 +103,10 @@ export const Route = createFileRoute("/api/product-search")({
           input = manualSearchInput(manualQuery);
         }
 
-        const response = await executeProductSearch(resolveProductSearchProvider(), input);
+        const response = await executeProductSearch(
+          resolveProductSearchProvider(),
+          input,
+        );
 
         // Only manual searches are logged here (one row per attempt); scan-based
         // searches already get their row from /api/fashion-scan, so logging them
@@ -103,7 +121,10 @@ export const Route = createFileRoute("/api/product-search")({
                   query: manualQuery,
                   errorMessage: response.error.message,
                 })
-              : await logManualSearchAttempt({ status: "success", query: manualQuery });
+              : await logManualSearchAttempt({
+                  status: "success",
+                  query: manualQuery,
+                });
         }
 
         // Best-effort persistence of real (non-mock) candidates into the
@@ -118,7 +139,8 @@ export const Route = createFileRoute("/api/product-search")({
             input.item.brandConfidence >= DETECTED_BRAND_MIN_CONFIDENCE
               ? input.item.visibleBrand
               : null;
-          const effectiveSearchId = manualQuery !== null ? manualSearchId : scanSearchId;
+          const effectiveSearchId =
+            manualQuery !== null ? manualSearchId : scanSearchId;
 
           await persistProductSearchResults({
             searchId: effectiveSearchId,
