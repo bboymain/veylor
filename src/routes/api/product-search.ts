@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
+import { recordDisplayedAlternativeImpressions } from "@/lib/alternative-impressions.server";
 import { SearchIdSchema } from "@/lib/database-identifiers";
 import { jsonResponse, type FashionScanItem } from "@/lib/fashion-scan";
 import type { ProductSearchInput } from "@/lib/product-search";
@@ -117,10 +118,20 @@ export const Route = createFileRoute("/api/product-search")({
             input.item.brandConfidence >= DETECTED_BRAND_MIN_CONFIDENCE
               ? input.item.visibleBrand
               : null;
+          const effectiveSearchId = manualQuery !== null ? manualSearchId : scanSearchId;
+
           await persistProductSearchResults({
-            searchId: manualQuery !== null ? manualSearchId : scanSearchId,
+            searchId: effectiveSearchId,
             queryUsed: manualQuery ?? input.searchQueries[0],
             detectedBrandName,
+            products: response.products,
+          });
+
+          // Stage 11 records only persisted SerpApi alternatives that were
+          // actually returned to the user. The RPC re-checks the search/product
+          // relationship, so forged or missing IDs cannot create impressions.
+          await recordDisplayedAlternativeImpressions({
+            searchId: effectiveSearchId,
             products: response.products,
           });
         }
