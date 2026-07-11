@@ -40,6 +40,13 @@ import {
   saveScanToHistory,
 } from "@/lib/scan-history";
 import type { FashionScanItem, FashionScanResponse, FashionScanResult } from "@/lib/fashion-scan";
+import {
+  groupProductsByTier,
+  PRODUCT_TIERS,
+  type ProductSearchResponse,
+  type ProductSearchResult,
+  type ProductTier,
+} from "@/lib/product-search";
 
 export const Route = createFileRoute("/")({ component: Index });
 
@@ -59,6 +66,12 @@ type EditableItemPatch = Partial<
     "name" | "category" | "color" | "style" | "material" | "pattern" | "visibleBrand"
   >
 >;
+
+type ProductSearchState =
+  | { status: "loading" }
+  | { status: "empty" }
+  | { status: "error"; message: string }
+  | { status: "success"; products: ProductSearchResult[] };
 
 const SCAN_STAGES = [
   "Preparing image",
@@ -81,6 +94,45 @@ function compactQuery(parts: Array<string | null | undefined>) {
     .join(" ")
     .replace(/\s+/g, " ")
     .trim();
+}
+
+function reportProductClick(searchId: string | null, product: ProductSearchResult): void {
+  if (!searchId) return;
+  // Fire-and-forget: never block or alter the product link's own navigation.
+  void fetch("/api/product-click", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({
+      searchId,
+      productUrl: product.productUrl,
+      productTitle: product.title,
+      retailer: product.retailer,
+      tier: product.tier,
+    }),
+  }).catch(() => {
+    // Ignore: click tracking must never affect the shopping experience.
+  });
+}
+
+async function fetchProductsForItem(item: FashionScanItem): Promise<ProductSearchState> {
+  try {
+    const response = await fetch("/api/product-search", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ item, searchQueries: item.searchQueries }),
+    });
+    const payload = (await response.json()) as ProductSearchResponse;
+
+    if ("error" in payload) {
+      return { status: "error", message: payload.error.message };
+    }
+    if (payload.products.length === 0) {
+      return { status: "empty" };
+    }
+    return { status: "success", products: payload.products };
+  } catch {
+    return { status: "error", message: "Shopping results are unavailable right now." };
+  }
 }
 
 function primaryItem(result: FashionScanResult) {
@@ -301,6 +353,7 @@ function Scanner() {
   const cropFrameRef = useRef<HTMLDivElement | null>(null);
   const cropInteractionRef = useRef<CropInteraction | null>(null);
   const abortRef = useRef<AbortController | null>(null);
+  const productSearchRunRef = useRef(0);
   const [status, setStatus] = useState<ScannerStatus>("idle");
   const [stage, setStage] = useState("Choose a fashion photo");
   const [imageSrc, setImageSrc] = useState("");
@@ -311,11 +364,37 @@ function Scanner() {
   const [analysisWarning, setAnalysisWarning] = useState("");
   const [isDragging, setIsDragging] = useState(false);
   const [scanResult, setScanResult] = useState<FashionScanResult | null>(null);
+  const [productSearches, setProductSearches] = useState<Record<string, ProductSearchState>>({});
+  const [searchId, setSearchId] = useState<string | null>(null);
 
   useEffect(() => {
     setHistory(loadScanHistory());
-    return () => abortRef.current?.abort();
+    return () => {
+      abortRef.current?.abort();
+      productSearchRunRef.current += 1;
+    };
   }, []);
+
+  const clearProductSearches = () => {
+    productSearchRunRef.current += 1;
+    setProductSearches({});
+  };
+
+  const loadProductSearches = (items: FashionScanItem[]) => {
+    const runId = productSearchRunRef.current + 1;
+    productSearchRunRef.current = runId;
+    setProductSearches(
+      Object.fromEntries(items.map((item) => [item.id, { status: "loading" } as const])),
+    );
+
+    void Promise.all(
+      items.map(async (item) => {
+        const nextState = await fetchProductsForItem(item);
+        if (productSearchRunRef.current !== runId) return;
+        setProductSearches((current) => ({ ...current, [item.id]: nextState }));
+      }),
+    );
+  };
 
   const handleFile = async (file?: File) => {
     if (!file) return;
@@ -336,6 +415,8 @@ function Scanner() {
       setFocusedImage("");
       setCrop({ x: 50, y: 50, width: 58, height: 58 });
       setScanResult(null);
+      setSearchId(null);
+      clearProductSearches();
       setStatus("ready");
       setStage("Ready to scan");
       setError("");
@@ -445,6 +526,8 @@ function Scanner() {
       const cropped = await cropAndResizeImage(imageSrc, crop, 512);
       setFocusedImage(cropped);
       setScanResult(null);
+      setSearchId(null);
+      clearProductSearches();
       setStage("Analyzing outfit");
 
       const controller = new AbortController();
@@ -470,6 +553,8 @@ function Scanner() {
       setStage("Building searches");
       const strongestItem = primaryItem(payload.result);
       setScanResult(payload.result);
+      setSearchId(payload.searchId ?? null);
+      loadProductSearches(payload.result.items);
 
       if (strongestItem.confidence < 0.35) {
         setAnalysisWarning("This scan is uncertain. Review the detected details before searching.");
@@ -525,6 +610,8 @@ function Scanner() {
     setFocusedImage(scan.thumbnail);
     setCrop({ x: 50, y: 50, width: 100, height: 100 });
     setScanResult(historyItemToScanResult(scan));
+    setSearchId(null);
+    clearProductSearches();
     setStatus("complete");
     setStage("Saved scan opened");
     setError("");
@@ -758,6 +845,8 @@ function Scanner() {
               {scanResult && status !== "scanning" && (
                 <DetectedItemsPanel
                   result={scanResult}
+                  productSearches={productSearches}
+                  searchId={searchId}
                   onItemChange={updateItem}
                   onSave={() => void saveCurrentScan()}
                 />
@@ -781,10 +870,14 @@ function Scanner() {
 
 function DetectedItemsPanel({
   result,
+  productSearches,
+  searchId,
   onItemChange,
   onSave,
 }: {
   result: FashionScanResult;
+  productSearches: Record<string, ProductSearchState>;
+  searchId: string | null;
   onItemChange: (itemId: string, patch: EditableItemPatch) => void;
   onSave: () => void;
 }) {
@@ -806,7 +899,13 @@ function DetectedItemsPanel({
 
       <div className="mt-5 grid gap-4">
         {result.items.map((item) => (
-          <DetectedItemCard key={item.id} item={item} onChange={onItemChange} />
+          <DetectedItemCard
+            key={item.id}
+            item={item}
+            productSearch={productSearches[item.id]}
+            searchId={searchId}
+            onChange={onItemChange}
+          />
         ))}
       </div>
     </div>
@@ -815,9 +914,13 @@ function DetectedItemsPanel({
 
 function DetectedItemCard({
   item,
+  productSearch,
+  searchId,
   onChange,
 }: {
   item: FashionScanItem;
+  productSearch?: ProductSearchState;
+  searchId: string | null;
   onChange: (itemId: string, patch: EditableItemPatch) => void;
 }) {
   const bestQuery = item.searchQueries[0];
@@ -890,6 +993,8 @@ function DetectedItemCard({
         )}
       </div>
 
+      {productSearch && <ProductResults state={productSearch} searchId={searchId} />}
+
       <details className="mt-5 border-t border-[rgba(201,169,106,0.12)] pt-5">
         <summary className="cursor-pointer text-[10px] uppercase tracking-luxe text-gold">
           Edit details
@@ -934,6 +1039,111 @@ function DetectedItemCard({
         </div>
       </details>
     </article>
+  );
+}
+
+const PRODUCT_TIER_LABELS: Record<ProductTier, string> = {
+  authentic: "Authentic",
+  premium: "Premium",
+  budget: "Budget",
+};
+
+function ProductResults({
+  state,
+  searchId,
+}: {
+  state: ProductSearchState;
+  searchId: string | null;
+}) {
+  if (state.status === "loading") {
+    return (
+      <div className="mt-5 border-t border-[rgba(201,169,106,0.12)] pt-5" aria-live="polite">
+        <div className="flex items-center gap-2 text-[10px] uppercase tracking-luxe text-gold/75">
+          <RotateCw className="h-3.5 w-3.5 animate-spin" /> Finding similar products
+        </div>
+        <div className="mt-4 grid gap-3 sm:grid-cols-3" aria-hidden="true">
+          {PRODUCT_TIERS.map((tier) => (
+            <div key={tier} className="h-48 animate-pulse bg-white/5" />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (state.status === "empty") {
+    return (
+      <div className="mt-5 border-t border-[rgba(201,169,106,0.12)] pt-5 text-sm text-foreground/50">
+        No mock products were found for this item.
+      </div>
+    );
+  }
+
+  if (state.status === "error") {
+    return (
+      <div
+        role="alert"
+        className="mt-5 border-t border-[rgba(201,169,106,0.12)] pt-5 text-sm text-red-200/80"
+      >
+        {state.message}
+      </div>
+    );
+  }
+
+  const groups = groupProductsByTier(state.products);
+
+  return (
+    <div className="mt-5 border-t border-[rgba(201,169,106,0.12)] pt-5">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="text-[9px] uppercase tracking-luxe text-foreground/35">
+          Mock shopping results
+        </div>
+        <span className="text-[9px] uppercase tracking-luxe text-gold/60">Preview data</span>
+      </div>
+
+      <div className="mt-4 grid gap-4 sm:grid-cols-3">
+        {PRODUCT_TIERS.flatMap((tier) =>
+          groups[tier].map((product) => (
+            <a
+              key={product.id}
+              href={product.productUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={() => reportProductClick(searchId, product)}
+              className="group overflow-hidden border border-[rgba(201,169,106,0.18)] bg-white/[0.02] transition-colors hover:border-gold/50"
+            >
+              <div className="aspect-[4/3] overflow-hidden bg-white/5">
+                <img
+                  src={product.imageUrl}
+                  alt=""
+                  loading="lazy"
+                  className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
+                />
+              </div>
+              <div className="p-3">
+                <div className="text-[8px] uppercase tracking-luxe text-gold/70">
+                  {PRODUCT_TIER_LABELS[tier]}
+                </div>
+                <div className="mt-2 line-clamp-2 text-sm text-foreground/80">{product.title}</div>
+                <div className="mt-3 flex items-end justify-between gap-2">
+                  <div>
+                    <div className="text-sm text-foreground">
+                      {new Intl.NumberFormat("en-US", {
+                        style: "currency",
+                        currency: product.currency,
+                      }).format(product.price)}
+                    </div>
+                    <div className="mt-1 text-[9px] uppercase tracking-luxe text-foreground/40">
+                      {product.retailer}
+                    </div>
+                  </div>
+                  <ArrowRight className="h-3.5 w-3.5 text-gold" />
+                </div>
+              </div>
+            </a>
+          )),
+        )}
+      </div>
+    </div>
   );
 }
 
