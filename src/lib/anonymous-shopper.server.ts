@@ -54,6 +54,14 @@ export function attachAnonymousShopperCookie(response: Response, shopper: Anonym
   return response;
 }
 
+export function clearAnonymousShopperCookie(response: Response): Response {
+  response.headers.append(
+    "set-cookie",
+    `${SHOPPER_COOKIE}=; Path=/; Max-Age=0; HttpOnly; SameSite=Lax; Secure`,
+  );
+  return response;
+}
+
 export type ShopperPreferences = {
   preferredRetailers: Record<string, number>;
   preferredTiers: Record<string, number>;
@@ -109,6 +117,24 @@ export async function loadShopperPreferences(profileId: string): Promise<Shopper
   }
 }
 
+export async function deleteShopperProfile(profileId: string): Promise<boolean> {
+  const config = supabaseConfig();
+  if (!config || !UUID_PATTERN.test(profileId)) return false;
+
+  try {
+    const response = await fetch(`${config.url}/rest/v1/rpc/delete_shopper_profile`, {
+      method: "POST",
+      headers: headers(config),
+      body: JSON.stringify({ p_profile_id: profileId }),
+    });
+    if (!response.ok) return false;
+    const result = (await response.json()) as unknown;
+    return result === true;
+  } catch {
+    return false;
+  }
+}
+
 export async function recordShopperPreferenceClick(input: {
   profileId: string;
   searchId: string;
@@ -150,8 +176,8 @@ export function shopperPreferenceScore(
   score += Math.min(0.4, tierClicks * 0.1);
 
   if (preferences.averagePrice !== null && product.price > 0) {
-    const relativeDifference = Math.abs(product.price - preferences.averagePrice) /
-      Math.max(preferences.averagePrice, 1);
+    const relativeDifference =
+      Math.abs(product.price - preferences.averagePrice) / Math.max(preferences.averagePrice, 1);
     score += Math.max(-0.4, 0.3 - relativeDifference * 0.4);
   }
 
