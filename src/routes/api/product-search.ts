@@ -3,12 +3,13 @@ import { z } from "zod";
 import { recordDisplayedAlternativeImpressions } from "@/lib/alternative-impressions.server";
 import { SearchIdSchema } from "@/lib/database-identifiers";
 import { jsonResponse, type FashionScanItem } from "@/lib/fashion-scan";
-import type { ProductSearchInput } from "@/lib/product-search";
+import type { ProductSearchInput, ProductSearchResponse } from "@/lib/product-search";
 import {
   executeProductSearch,
   ProductSearchInputSchema,
 } from "@/lib/product-search-provider";
 import { persistProductSearchResults } from "@/lib/product-persistence.server";
+import { rankProductSearchResults } from "@/lib/product-ranking.server";
 import { logManualSearchAttempt } from "@/lib/search-logging.server";
 import { resolveProductSearchProvider } from "@/lib/serpapi-product-search.server";
 
@@ -73,8 +74,6 @@ export const Route = createFileRoute("/api/product-search")({
 
         const body: unknown = await request.json();
 
-        // Scan-shaped input is tried first so existing behavior is unchanged;
-        // otherwise accept a manual `{ query }` payload.
         let input: ProductSearchInput;
         let manualQuery: string | null = null;
         let scanSearchId: string | null = null;
@@ -88,7 +87,6 @@ export const Route = createFileRoute("/api/product-search")({
         } else {
           const manualInput = ManualSearchInputSchema.safeParse(body);
           if (!manualInput.success) {
-            // Invalid/empty manual queries are rejected before any logging.
             return jsonResponse(
               {
                 error: {
@@ -103,23 +101,19 @@ export const Route = createFileRoute("/api/product-search")({
           input = manualSearchInput(manualQuery);
         }
 
-        const response = await executeProductSearch(
+        const providerResponse = await executeProductSearch(
           resolveProductSearchProvider(),
           input,
         );
 
-        // Only manual searches are logged here (one row per attempt); scan-based
-        // searches already get their row from /api/fashion-scan, so logging them
-        // again would create duplicates. Logging is best-effort and never blocks
-        // or breaks the product results.
         let manualSearchId: string | null = null;
         if (manualQuery !== null) {
           manualSearchId =
-            "error" in response
+            "error" in providerResponse
               ? await logManualSearchAttempt({
                   status: "error",
                   query: manualQuery,
-                  errorMessage: response.error.message,
+                  errorMessage: providerResponse.error.message,
                 })
               : await logManualSearchAttempt({
                   status: "success",
@@ -127,12 +121,14 @@ export const Route = createFileRoute("/api/product-search")({
                 });
         }
 
-        // Best-effort persistence of real (non-mock) candidates into the
-        // products/alternatives tables. Never throws and never blocks results;
-        // alternatives are linked only when a searchId is known (manual: the
-        // row logged above; scan: the id the client received from
-        // /api/fashion-scan). Mock fallback results are never persisted.
-        if (!("error" in response)) {
+        let response: ProductSearchResponse = providerResponse;
+        if (!("error" in providerResponse)) {
+          // Stage 12 uses only persisted verification, freshness, impressions,
+          // and clicks. It preserves provider order when evidence is missing and
+          // limits any result to moving upward by at most two positions.
+          const rankedProducts = await rankProductSearchResults(providerResponse.products);
+          response = { products: rankedProducts };
+
           const detectedBrandName =
             manualQuery === null &&
             input.item.visibleBrand &&
@@ -146,15 +142,12 @@ export const Route = createFileRoute("/api/product-search")({
             searchId: effectiveSearchId,
             queryUsed: manualQuery ?? input.searchQueries[0],
             detectedBrandName,
-            products: response.products,
+            products: rankedProducts,
           });
 
-          // Stage 11 records only persisted SerpApi alternatives that were
-          // actually returned to the user. The RPC re-checks the search/product
-          // relationship, so forged or missing IDs cannot create impressions.
           await recordDisplayedAlternativeImpressions({
             searchId: effectiveSearchId,
-            products: response.products,
+            products: rankedProducts,
           });
         }
 
