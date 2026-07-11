@@ -13,6 +13,7 @@ const baseProduct = {
   imageUrl: "https://example.com/image.jpg",
   productUrl: "https://example.com/item/1?utm_source=test",
   source: "serpapi" as const,
+  tier: "budget" as const,
 };
 
 describe("displayed product normalization", () => {
