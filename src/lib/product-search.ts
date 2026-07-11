@@ -21,9 +21,12 @@ export type ProductSearchInput = {
   searchQueries: string[];
 };
 
+// `searchId` is only present for manual searches, which are logged by the
+// product-search route itself; scan-based searches get their searchId from
+// /api/fashion-scan and omit it here.
 export type ProductSearchResponse =
-  | { products: ProductSearchResult[] }
-  | { error: { code: "PRODUCT_SEARCH_FAILED"; message: string } };
+  | { products: ProductSearchResult[]; searchId?: string | null }
+  | { error: { code: "PRODUCT_SEARCH_FAILED"; message: string }; searchId?: string | null };
 
 export function groupProductsByTier(products: ProductSearchResult[]) {
   return products.reduce<Record<ProductTier, ProductSearchResult[]>>(

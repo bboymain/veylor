@@ -74,13 +74,43 @@ export type LogScanAttemptInput =
     };
 
 /**
+ * Inserts one row into the searches table. Returns the new row's id on
+ * success, or null when Supabase is not configured or the write fails.
+ * Never throws.
+ */
+async function insertSearchRow(
+  row: Record<string, unknown>,
+  logLabel: string,
+): Promise<string | null> {
+  const config = supabaseConfig();
+  if (!config) return null;
+
+  try {
+    const response = await fetch(`${config.url}/rest/v1/searches`, {
+      method: "POST",
+      headers: supabaseHeaders(config, "return=representation"),
+      body: JSON.stringify(row),
+    });
+
+    if (!response.ok) {
+      console.error(`[search-logging] Failed to log ${logLabel} (status ${response.status}).`);
+      return null;
+    }
+
+    const rows = (await response.json()) as Array<{ id?: unknown }>;
+    const id = rows[0]?.id;
+    return typeof id === "string" ? id : null;
+  } catch (error) {
+    console.error(`[search-logging] Failed to log ${logLabel}.`, error);
+    return null;
+  }
+}
+
+/**
  * Records one row per scan attempt. Returns the new row's id on success, or
  * null when Supabase is not configured or the write fails. Never throws.
  */
 export async function logScanAttempt(input: LogScanAttemptInput): Promise<string | null> {
-  const config = supabaseConfig();
-  if (!config) return null;
-
   const row =
     input.status === "success"
       ? {
@@ -95,25 +125,36 @@ export async function logScanAttempt(input: LogScanAttemptInput): Promise<string
           error_message: sanitizeErrorMessage(input.errorMessage),
         };
 
-  try {
-    const response = await fetch(`${config.url}/rest/v1/searches`, {
-      method: "POST",
-      headers: supabaseHeaders(config, "return=representation"),
-      body: JSON.stringify(row),
-    });
+  return insertSearchRow(row, "scan attempt");
+}
 
-    if (!response.ok) {
-      console.error(`[search-logging] Failed to log scan attempt (status ${response.status}).`);
-      return null;
-    }
+/** Identifies manual product-search rows in the shared searches table. */
+export const MANUAL_SEARCH_MODEL = "manual";
 
-    const rows = (await response.json()) as Array<{ id?: unknown }>;
-    const id = rows[0]?.id;
-    return typeof id === "string" ? id : null;
-  } catch (error) {
-    console.error("[search-logging] Failed to log scan attempt.", error);
-    return null;
-  }
+export type LogManualSearchInput =
+  | { status: "success"; query: string }
+  | { status: "error"; query: string; errorMessage: string };
+
+/**
+ * Records one row per manual product-search attempt in the existing searches
+ * table, reusing existing columns: `model` is "manual" (scan rows carry the
+ * Gemini model name instead), `primary_search_query` stores the typed query,
+ * and `error_message` stores only the provider's generic, sanitized message —
+ * never API keys, request URLs, or raw provider responses. Returns the new
+ * row's id or null. Never throws.
+ */
+export async function logManualSearchAttempt(input: LogManualSearchInput): Promise<string | null> {
+  const row = {
+    status: input.status,
+    model: MANUAL_SEARCH_MODEL,
+    summary: "Manual product search",
+    primary_search_query: input.query,
+    ...(input.status === "error"
+      ? { error_message: sanitizeErrorMessage(input.errorMessage) }
+      : {}),
+  };
+
+  return insertSearchRow(row, "manual product search");
 }
 
 export type ProductClickInput = {
