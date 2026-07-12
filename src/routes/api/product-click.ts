@@ -7,7 +7,7 @@ import {
 } from "@/lib/anonymous-shopper.server";
 import { SearchIdSchema } from "@/lib/database-identifiers";
 import { jsonResponse } from "@/lib/fashion-scan";
-import { verifyProductClickEvidence } from "@/lib/product-verification.server";
+import { recordAlternativeClick } from "@/lib/product-persistence.server";
 import { recordProductClick } from "@/lib/search-logging.server";
 
 export const ProductClickInputSchema = z.object({
@@ -45,20 +45,18 @@ export const Route = createFileRoute("/api/product-click")({
           );
         }
 
-        // Click logging is an interest/ranking signal only. It must not write
-        // verification, authenticity, classification, cache, or identity fields;
-        // the existing evidence-verification path remains separately governed.
-        const [saved, verification] = await Promise.all([
+        // Both writes are interest/ranking signals only. They must never write
+        // verification, authenticity, classification, cache, or identity fields.
+        const [saved, alternativeSaved] = await Promise.all([
           recordProductClick(input.data),
-          verifyProductClickEvidence({
+          recordAlternativeClick({
             searchId: input.data.searchId,
             productUrl: input.data.productUrl,
           }),
         ]);
 
-        // Preference learning is intentionally sequenced after verification.
-        // The database RPC independently requires the clicked alternative to
-        // belong to this search and already be marked clicked.
+        // Preference learning is sequenced after the relationship-scoped
+        // alternative interest write so only persisted clicks can contribute.
         const preferenceLearned = await recordShopperPreferenceClick({
           profileId: shopper.id,
           searchId: input.data.searchId,
@@ -66,7 +64,7 @@ export const Route = createFileRoute("/api/product-click")({
         });
 
         return attachAnonymousShopperCookie(
-          jsonResponse({ success: saved, verification, preferenceLearned }),
+          jsonResponse({ success: saved, alternativeSaved, preferenceLearned }),
           shopper,
         );
       },

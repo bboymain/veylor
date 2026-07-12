@@ -1,40 +1,4 @@
 import { describe, expect, test } from "bun:test";
-import { parseVerificationRpcRow } from "./product-verification.server";
-
-describe("verification RPC result parsing", () => {
-  test("preserves the legacy result shape for compatibility", () => {
-    expect(
-      parseVerificationRpcRow({
-        alternative_verified: true,
-        product_verified: true,
-        search_cache_verified: true,
-      }),
-    ).toEqual({
-      alternativeVerified: true,
-      productVerified: true,
-      searchCacheVerified: true,
-    });
-  });
-
-  test("defaults malformed or missing evidence to unverified", () => {
-    expect(parseVerificationRpcRow({})).toEqual({
-      alternativeVerified: false,
-      productVerified: false,
-      searchCacheVerified: false,
-    });
-    expect(
-      parseVerificationRpcRow({
-        alternative_verified: "true",
-        product_verified: 1,
-        search_cache_verified: null,
-      }),
-    ).toEqual({
-      alternativeVerified: false,
-      productVerified: false,
-      searchCacheVerified: false,
-    });
-  });
-});
 
 describe("accepted-match signal database policy", () => {
   test("keeps legacy click handling relationship-scoped", async () => {
@@ -61,5 +25,17 @@ describe("accepted-match signal database policy", () => {
     expect(clickFunction).not.toContain("authenticity_status");
     expect(clickFunction).not.toContain("classification_");
     expect(clickFunction).not.toContain("cache_status = 'verified'");
+  });
+
+  test("retires the compatibility RPC after the application moves to interest-only ownership", async () => {
+    const sql = (
+      await Bun.file(
+        "supabase/migrations/20260712220052_legacy_click_verification_cleanup.sql",
+      ).text()
+    ).toLowerCase();
+
+    expect(sql).toContain(
+      "drop function if exists public.verify_product_click(uuid, text, timestamptz)",
+    );
   });
 });
