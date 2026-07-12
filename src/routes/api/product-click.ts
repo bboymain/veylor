@@ -45,6 +45,9 @@ export const Route = createFileRoute("/api/product-click")({
           );
         }
 
+        // Click logging is an interest/ranking signal only. It must not write
+        // verification, authenticity, classification, cache, or identity fields;
+        // the existing evidence-verification path remains separately governed.
         const [saved, verification] = await Promise.all([
           recordProductClick(input.data),
           verifyProductClickEvidence({

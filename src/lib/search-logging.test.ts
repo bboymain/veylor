@@ -11,6 +11,7 @@ import {
 
 const ORIGINAL_FETCH = globalThis.fetch;
 const ORIGINAL_SERPAPI_API_KEY = process.env.SERPAPI_API_KEY;
+const MANUAL_SEARCH_ID = "00000000-0000-4000-8000-000000000009";
 
 function setSupabaseEnv() {
   process.env.SUPABASE_URL = "https://example.supabase.co";
@@ -138,7 +139,15 @@ describe("search-logging", () => {
     expect(ok).toBe(true);
     expect(capturedUrl).toBe("https://example.supabase.co/rest/v1/searches?id=eq.row-123");
     expect(capturedInit?.method).toBe("PATCH");
-    const body = JSON.parse(String(capturedInit?.body));
+    const body = JSON.parse(String(capturedInit?.body)) as Record<string, unknown>;
+    expect(Object.keys(body).sort()).toEqual([
+      "clicked",
+      "clicked_at",
+      "clicked_product_title",
+      "clicked_product_url",
+      "clicked_retailer",
+      "clicked_tier",
+    ]);
     expect(body.clicked).toBe(true);
     expect(typeof body.clicked_at).toBe("string");
     expect(body.clicked_product_url).toBe("https://example.com/product");
@@ -337,7 +346,7 @@ describe("search-logging", () => {
     globalThis.fetch = (async (url: string | URL, init?: RequestInit) => {
       if (init?.method === "POST") {
         insertBody = JSON.parse(String(init?.body));
-        return new Response(JSON.stringify([{ id: "manual-row-9" }]), { status: 201 });
+        return new Response(JSON.stringify([{ id: MANUAL_SEARCH_ID }]), { status: 201 });
       }
       if (String(url).includes("/rest/v1/searches")) {
         patchUrl = String(url);
@@ -355,7 +364,7 @@ describe("search-logging", () => {
     const searchPayload = (await searchResponse.json()) as { searchId?: unknown };
 
     expect(searchResponse.status).toBe(200);
-    expect(searchPayload.searchId).toBe("manual-row-9");
+    expect(searchPayload.searchId).toBe(MANUAL_SEARCH_ID);
     expect(insertBody.model).toBe(MANUAL_SEARCH_MODEL);
     expect(insertBody.primary_search_query).toBe("black wool coat");
 
@@ -373,6 +382,6 @@ describe("search-logging", () => {
     expect(clickResponse.status).toBe(200);
     expect(clickPayload.success).toBe(true);
     expect(patchMethod).toBe("PATCH");
-    expect(patchUrl).toBe("https://example.supabase.co/rest/v1/searches?id=eq.manual-row-9");
+    expect(patchUrl).toBe(`https://example.supabase.co/rest/v1/searches?id=eq.${MANUAL_SEARCH_ID}`);
   });
 });

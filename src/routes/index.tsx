@@ -111,6 +111,8 @@ function reportProductClick(searchId: string | null, product: ProductSearchResul
       productUrl: product.productUrl,
       productTitle: product.title,
       retailer: product.retailer,
+      // Snapshot of the displayed UI label only. Even "authentic" is not
+      // verification evidence and must not promote identity or cache trust.
       tier: product.tier,
     }),
   }).catch(() => {

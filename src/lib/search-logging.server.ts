@@ -164,7 +164,12 @@ export type ProductClickInput = {
   tier: string;
 };
 
-/** Records a product click against an existing search row. */
+/**
+ * Records interest/ranking signals only. Clicks must never update verification,
+ * authenticity, classification, cache promotion, or trusted identity fields.
+ * `clicked_tier` is the displayed UI-label snapshot, including "authentic";
+ * it is not verification evidence.
+ */
 export async function recordProductClick(input: ProductClickInput): Promise<boolean> {
   const config = supabaseConfig();
   if (!config) return false;

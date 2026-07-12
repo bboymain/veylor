@@ -1,5 +1,4 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { Route as ProductClickRoute } from "../routes/api/product-click";
 import { Route as ProductSearchRoute } from "../routes/api/product-search";
 import {
   normalizeProductUrl,
@@ -10,6 +9,7 @@ import type { ProductSearchResult } from "./product-search";
 
 const ORIGINAL_FETCH = globalThis.fetch;
 const ORIGINAL_SERPAPI_API_KEY = process.env.SERPAPI_API_KEY;
+const ROUTE_SEARCH_ID = "00000000-0000-4000-8000-000000000009";
 
 function setSupabaseEnv() {
   process.env.SUPABASE_URL = "https://example.supabase.co";
@@ -303,7 +303,10 @@ describe("product-persistence", () => {
       ],
     });
 
-    const insert = captured.find((request) => request.url.includes("/rest/v1/alternatives"));
+    const insert = captured.find(
+      (request) =>
+        request.url.includes("/rest/v1/alternatives?on_conflict=") && request.method === "POST",
+    );
     expect(insert?.url.includes("on_conflict=search_id,product_id")).toBe(true);
     expect(insert?.headers.prefer?.includes("resolution=ignore-duplicates")).toBe(true);
     const rows = JSON.parse(insert?.body ?? "[]") as Array<Record<string, unknown>>;
@@ -314,6 +317,40 @@ describe("product-persistence", () => {
     // Official-domain product is classified verified; unrelated titles unknown.
     expect(rows[0].classification_label).toBe("verified");
     expect(rows[1].classification_label).toBe("unknown");
+  });
+
+  test("re-running persistence cannot reset historical alternative click data", async () => {
+    setSupabaseEnv();
+    const captured = installFetchMock([
+      { match: (url) => url.includes("/rest/v1/brands"), respond: () => json([]) },
+      {
+        match: (url) => url.includes("/rest/v1/products"),
+        respond: () =>
+          json([{ id: "prod-1", normalized_product_url: "https://www.gucci.com/us/p/1" }], 201),
+      },
+      { match: (url) => url.includes("/rest/v1/alternatives"), respond: () => json([], 201) },
+    ]);
+    const input = {
+      searchId: "search-9",
+      queryUsed: "gucci bag",
+      detectedBrandName: "Gucci",
+      products: [serpProduct({})],
+    };
+
+    await persistProductSearchResults(input);
+    await persistProductSearchResults(input);
+
+    const inserts = captured.filter(
+      (request) => request.url.includes("/rest/v1/alternatives") && request.method === "POST",
+    );
+    expect(inserts.length).toBe(2);
+    for (const insert of inserts) {
+      expect(insert.headers.prefer).toContain("resolution=ignore-duplicates");
+      const rows = JSON.parse(insert.body) as Array<Record<string, unknown>>;
+      expect(rows.length).toBe(1);
+      expect(rows[0].clicked).toBeUndefined();
+      expect(rows[0].clicked_at).toBeUndefined();
+    }
   });
 
   test("does not create alternatives when there is no searchId", async () => {
@@ -481,7 +518,11 @@ describe("product-persistence", () => {
     ]);
 
     const response = await postHandlerOf(ProductSearchRoute)(
-      jsonRequest({ item: scanItem, searchQueries: scanItem.searchQueries, searchId: "scan-7" }),
+      jsonRequest({
+        item: scanItem,
+        searchQueries: scanItem.searchQueries,
+        searchId: ROUTE_SEARCH_ID,
+      }),
     );
 
     expect(response.status).toBe(200);
@@ -498,22 +539,21 @@ describe("product-persistence", () => {
     expect(gucciRow?.market_tier).toBe("luxury");
     expect(gucciRow?.authenticity_status).toBe("verified");
 
-    const insert = captured.find((request) => request.url.includes("/rest/v1/alternatives"));
+    const insert = captured.find(
+      (request) =>
+        request.url.includes("/rest/v1/alternatives?on_conflict=") && request.method === "POST",
+    );
     const altRows = JSON.parse(insert?.body ?? "[]") as Array<Record<string, unknown>>;
     expect(altRows.length).toBe(2);
-    expect(altRows.every((row) => row.search_id === "scan-7")).toBe(true);
+    expect(altRows.every((row) => row.search_id === ROUTE_SEARCH_ID)).toBe(true);
     // Display order (price-sorted by the temporary tiers) is preserved as rank.
     expect(altRows.map((row) => row.result_rank)).toEqual([1, 2]);
     expect(altRows.map((row) => row.product_id)).toEqual(["prod-cheap", "prod-gucci"]);
   });
 
-  test("click updates both searches and the matching alternatives row", async () => {
+  test("alternative clicks patch only interest fields and never write product identity", async () => {
     setSupabaseEnv();
     const captured = installFetchMock([
-      {
-        match: (url, method) => url.includes("/rest/v1/searches") && method === "PATCH",
-        respond: () => new Response(null, { status: 204 }),
-      },
       {
         match: (url, method) => url.includes("/rest/v1/products") && method === "GET",
         respond: () => json([{ id: "prod-gucci" }]),
@@ -524,24 +564,11 @@ describe("product-persistence", () => {
       },
     ]);
 
-    const response = await postHandlerOf(ProductClickRoute)(
-      jsonRequest({
-        searchId: "search-9",
-        productUrl: "https://www.gucci.com/us/p/1?utm_source=google",
-        productTitle: "Gucci GG Marmont shoulder bag",
-        retailer: "Gucci",
-        tier: "authentic",
-      }),
-    );
-    const payload = (await response.json()) as { success?: unknown };
-
-    expect(response.status).toBe(200);
-    expect(payload.success).toBe(true);
-
-    const searchesPatch = captured.find(
-      (request) => request.url.includes("/rest/v1/searches") && request.method === "PATCH",
-    );
-    expect(searchesPatch?.url.includes("id=eq.search-9")).toBe(true);
+    const ok = await recordAlternativeClick({
+      searchId: ROUTE_SEARCH_ID,
+      productUrl: "https://www.gucci.com/us/p/1?utm_source=google",
+    });
+    expect(ok).toBe(true);
 
     const lookup = captured.find(
       (request) => request.url.includes("/rest/v1/products") && request.method === "GET",
@@ -551,11 +578,19 @@ describe("product-persistence", () => {
     const altPatch = captured.find(
       (request) => request.url.includes("/rest/v1/alternatives") && request.method === "PATCH",
     );
-    expect(altPatch?.url.includes("search_id=eq.search-9")).toBe(true);
+    expect(altPatch?.url.includes(`search_id=eq.${ROUTE_SEARCH_ID}`)).toBe(true);
     expect(altPatch?.url.includes("product_id=in.(prod-gucci)")).toBe(true);
     const patchBody = JSON.parse(altPatch?.body ?? "{}") as Record<string, unknown>;
+    expect(Object.keys(patchBody).sort()).toEqual(["clicked", "clicked_at"]);
     expect(patchBody.clicked).toBe(true);
     expect(typeof patchBody.clicked_at).toBe("string");
+
+    const identityWrites = captured.filter(
+      (request) =>
+        (request.url.includes("/rest/v1/products") || request.url.includes("/rest/v1/brands")) &&
+        request.method !== "GET",
+    );
+    expect(identityWrites).toEqual([]);
   });
 
   test("alternative click failures never throw and report false", async () => {

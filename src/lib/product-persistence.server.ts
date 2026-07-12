@@ -307,8 +307,10 @@ export type AlternativeClickInput = {
 };
 
 /**
- * Best-effort: marks the alternatives row matching this search and product
- * URL as clicked. Never throws; the merchant link must open regardless.
+ * Best-effort: records interest/ranking signals on the matching alternative.
+ * This click PATCH must never update verification, authenticity,
+ * classification, cache promotion, or trusted identity fields. Never throws;
+ * the merchant link must open regardless.
  */
 export async function recordAlternativeClick(input: AlternativeClickInput): Promise<boolean> {
   const config = supabaseConfig();
