@@ -20,6 +20,7 @@ import {
   Upload,
 } from "lucide-react";
 import heroOutfit from "@/assets/hero-outfit.jpg";
+import { ProductResultCard } from "@/components/product-result-card";
 import {
   buildRetailerLinks,
   confidenceLabel,
@@ -41,6 +42,12 @@ import {
   saveScanToHistory,
 } from "@/lib/scan-history";
 import type { FashionScanItem, FashionScanResponse, FashionScanResult } from "@/lib/fashion-scan";
+import {
+  acceptanceKey,
+  completedAcceptanceStatus,
+  requestProductAcceptance,
+  type ProductAcceptanceStatus,
+} from "@/lib/product-acceptance";
 import {
   groupProductsByTier,
   PRODUCT_TIERS,
@@ -1108,6 +1115,24 @@ function ProductResults({
   state: ProductSearchState;
   searchId: string | null;
 }) {
+  const [acceptanceStatuses, setAcceptanceStatuses] = useState<
+    Record<string, ProductAcceptanceStatus>
+  >({});
+
+  const confirmProductMatch = async (product: ProductSearchResult) => {
+    if (!searchId || product.source !== "serpapi") return;
+    const key = acceptanceKey(searchId, product.productUrl);
+    setAcceptanceStatuses((current) => ({ ...current, [key]: "submitting" }));
+    const accepted = await requestProductAcceptance({
+      searchId,
+      productUrl: product.productUrl,
+    });
+    setAcceptanceStatuses((current) => ({
+      ...current,
+      [key]: completedAcceptanceStatus(accepted),
+    }));
+  };
+
   if (state.status === "loading") {
     return (
       <div className="mt-5 border-t border-[rgba(201,169,106,0.12)] pt-5" aria-live="polite">
@@ -1172,55 +1197,21 @@ function ProductResults({
 
       <div className="mt-4 grid gap-4 sm:grid-cols-3">
         {PRODUCT_TIERS.flatMap((tier) =>
-          groups[tier].map((product) => (
-            <a
-              key={product.id}
-              href={product.productUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={() => reportProductClick(searchId, product)}
-              className="group overflow-hidden border border-[rgba(201,169,106,0.18)] bg-white/[0.02] transition-colors hover:border-gold/50 focus-visible:border-gold/70"
-            >
-              <div className="aspect-[4/3] overflow-hidden bg-white/5">
-                {product.imageUrl ? (
-                  <img
-                    src={product.imageUrl}
-                    alt=""
-                    loading="lazy"
-                    className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
-                  />
-                ) : (
-                  <div
-                    className="flex h-full w-full items-center justify-center"
-                    aria-hidden="true"
-                  >
-                    <ImageIcon className="h-8 w-8 text-gold/25" />
-                  </div>
-                )}
-              </div>
-              <div className="p-3">
-                <div className="text-[8px] uppercase tracking-luxe text-gold/70">
-                  {PRODUCT_TIER_LABELS[tier]}
-                </div>
-                <div className="mt-2 line-clamp-2 text-sm text-foreground/80">{product.title}</div>
-                <div className="mt-3 flex items-end justify-between gap-2">
-                  <div>
-                    <div className="text-sm text-foreground">
-                      {new Intl.NumberFormat("en-US", {
-                        style: "currency",
-                        currency: product.currency,
-                      }).format(product.price)}
-                    </div>
-                    <div className="mt-1 text-[9px] uppercase tracking-luxe text-foreground/40">
-                      {product.retailer}
-                    </div>
-                  </div>
-                  <ArrowRight className="h-3.5 w-3.5 text-gold" aria-hidden="true" />
-                </div>
-                <span className="sr-only">Opens the retailer page in a new tab.</span>
-              </div>
-            </a>
-          )),
+          groups[tier].map((product) => {
+            const canAccept = Boolean(searchId) && product.source === "serpapi";
+            const key = searchId ? acceptanceKey(searchId, product.productUrl) : "";
+            return (
+              <ProductResultCard
+                key={product.id}
+                product={product}
+                tierLabel={PRODUCT_TIER_LABELS[tier]}
+                canAccept={canAccept}
+                acceptanceStatus={acceptanceStatuses[key] ?? "idle"}
+                onRetailerClick={() => reportProductClick(searchId, product)}
+                onAccept={() => void confirmProductMatch(product)}
+              />
+            );
+          }),
         )}
       </div>
     </div>

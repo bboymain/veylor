@@ -319,7 +319,7 @@ describe("product-persistence", () => {
     expect(rows[1].classification_label).toBe("unknown");
   });
 
-  test("re-running persistence cannot reset historical alternative click data", async () => {
+  test("re-running persistence cannot reset historical alternative signal data", async () => {
     setSupabaseEnv();
     const captured = installFetchMock([
       { match: (url) => url.includes("/rest/v1/brands"), respond: () => json([]) },
@@ -350,6 +350,8 @@ describe("product-persistence", () => {
       expect(rows.length).toBe(1);
       expect(rows[0].clicked).toBeUndefined();
       expect(rows[0].clicked_at).toBeUndefined();
+      expect(rows[0].accepted_match).toBeUndefined();
+      expect(rows[0].accepted_at).toBeUndefined();
     }
   });
 
