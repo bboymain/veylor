@@ -111,7 +111,7 @@ async function insertSearchRow(
 
 /**
  * Records one row per scan attempt. New AI rows remain cache-unverified by
- * database default; Stage 10 will define evidence-based promotion.
+ * database default; only separately governed trusted evidence may promote them.
  */
 export async function logScanAttempt(input: LogScanAttemptInput): Promise<string | null> {
   const row =

@@ -384,4 +384,71 @@ describe("search-logging", () => {
     expect(patchMethod).toBe("PATCH");
     expect(patchUrl).toBe(`https://example.supabase.co/rest/v1/searches?id=eq.${MANUAL_SEARCH_ID}`);
   });
+
+  test("product-click route uses only interest owners and never a verification RPC", async () => {
+    setSupabaseEnv();
+    const requests: Array<{ url: string; method: string; body: Record<string, unknown> }> = [];
+    globalThis.fetch = (async (url: string | URL, init?: RequestInit) => {
+      const request = {
+        url: String(url),
+        method: init?.method ?? "GET",
+        body: init?.body ? (JSON.parse(String(init.body)) as Record<string, unknown>) : {},
+      };
+      requests.push(request);
+
+      if (request.url.includes("/rest/v1/products") && request.method === "GET") {
+        return new Response(JSON.stringify([{ id: "product-1" }]), { status: 200 });
+      }
+      if (request.url.includes("/rest/v1/alternatives") && request.method === "PATCH") {
+        return new Response(null, { status: 204 });
+      }
+      if (request.url.includes("/rest/v1/rpc/record_shopper_preference_click")) {
+        return new Response("true", { status: 200 });
+      }
+      return new Response(null, { status: 204 });
+    }) as typeof fetch;
+
+    const response = await postHandlerOf(ProductClickRoute)(
+      jsonRequest({
+        searchId: MANUAL_SEARCH_ID,
+        productUrl: "https://example.com/product/1",
+        productTitle: "Black wool coat",
+        retailer: "Example Shop",
+        tier: "authentic",
+      }),
+    );
+    const payload = (await response.json()) as {
+      success?: unknown;
+      alternativeSaved?: unknown;
+      verification?: unknown;
+    };
+
+    expect(response.status).toBe(200);
+    expect(payload.success).toBe(true);
+    expect(payload.alternativeSaved).toBe(true);
+    expect(payload.verification).toBeUndefined();
+    expect(requests.some((request) => request.url.includes("/rpc/verify_product_click"))).toBe(
+      false,
+    );
+
+    const alternativePatch = requests.find(
+      (request) => request.url.includes("/rest/v1/alternatives") && request.method === "PATCH",
+    );
+    expect(Object.keys(alternativePatch?.body ?? {}).sort()).toEqual(["clicked", "clicked_at"]);
+    expect(
+      requests.filter(
+        (request) =>
+          (request.url.includes("/rest/v1/products") || request.url.includes("/rest/v1/brands")) &&
+          request.method !== "GET",
+      ),
+    ).toEqual([]);
+    expect(
+      requests.some(
+        (request) =>
+          request.url.includes("verification") ||
+          request.url.includes("authenticity") ||
+          request.url.includes("cache_status"),
+      ),
+    ).toBe(false);
+  });
 });
