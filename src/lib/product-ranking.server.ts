@@ -36,6 +36,7 @@ export type ProductRankingEvidence = {
   freshnessStatus: "fresh" | "stale" | "unavailable" | "unknown";
   totalImpressions: number;
   totalClicks: number;
+  totalAcceptances: number;
 };
 
 type RankingEvidenceRow = {
@@ -44,6 +45,7 @@ type RankingEvidenceRow = {
   freshness_status?: unknown;
   total_impressions?: unknown;
   total_clicks?: unknown;
+  total_acceptances?: unknown;
 };
 
 const verificationValues = new Set(["verified", "unverified", "rejected"]);
@@ -65,6 +67,10 @@ export function parseRankingEvidenceRow(row: RankingEvidenceRow): ProductRanking
       : 0;
   const totalClicks =
     typeof row.total_clicks === "number" && row.total_clicks >= 0 ? row.total_clicks : 0;
+  const totalAcceptances =
+    typeof row.total_acceptances === "number" && row.total_acceptances >= 0
+      ? row.total_acceptances
+      : 0;
 
   return {
     normalizedProductUrl: row.normalized_product_url,
@@ -72,6 +78,7 @@ export function parseRankingEvidenceRow(row: RankingEvidenceRow): ProductRanking
     freshnessStatus: freshnessStatus as ProductRankingEvidence["freshnessStatus"],
     totalImpressions,
     totalClicks,
+    totalAcceptances,
   };
 }
 
@@ -90,6 +97,10 @@ export function productEvidenceScore(evidence: ProductRankingEvidence | undefine
     const smoothedCtr = (evidence.totalClicks + 1) / (evidence.totalImpressions + 4);
     score += Math.min(1.5, smoothedCtr * 3);
   }
+
+  // Explicit confirmations outweigh click interest, but their total influence
+  // remains bounded and cannot bypass the ranking displacement cap below.
+  score += Math.min(2, evidence.totalAcceptances);
 
   return score;
 }
