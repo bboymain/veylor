@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { parseVerificationRpcRow } from "./product-verification.server";
 
 describe("verification RPC result parsing", () => {
-  test("maps an accepted relationship-scoped click", () => {
+  test("preserves the legacy result shape for compatibility", () => {
     expect(
       parseVerificationRpcRow({
         alternative_verified: true,
@@ -36,10 +36,10 @@ describe("verification RPC result parsing", () => {
   });
 });
 
-describe("Stage 10 database policy", () => {
-  test("requires a persisted search-alternative-product relationship", async () => {
+describe("accepted-match signal database policy", () => {
+  test("keeps legacy click handling relationship-scoped", async () => {
     const sql = await Bun.file(
-      "supabase/migrations/20260711203000_stage_10_evidence_verification.sql",
+      "supabase/migrations/20260712205859_accepted_match_signal.sql",
     ).text();
 
     expect(sql).toContain("join public.products p on p.id = a.product_id");
@@ -48,24 +48,18 @@ describe("Stage 10 database policy", () => {
     expect(sql).toContain("p.normalized_product_url = p_normalized_product_url");
   });
 
-  test("promotes scan cache only for successful fingerprinted scans", async () => {
-    const sql = await Bun.file(
-      "supabase/migrations/20260711203000_stage_10_evidence_verification.sql",
-    ).text();
-
-    expect(sql).toContain("v_search_type = 'scan'");
-    expect(sql).toContain("v_search_status = 'success'");
-    expect(sql).toContain("v_image_sha256 is not null");
-    expect(sql).toContain("cache_verification_evidence = 'persisted_alternative_click'");
-  });
-
-  test("does not use AI confidence as verification evidence", async () => {
+  test("clicks no longer promote identity, authenticity, classification, or cache trust", async () => {
     const sql = (
-      await Bun.file("supabase/migrations/20260711203000_stage_10_evidence_verification.sql").text()
+      await Bun.file("supabase/migrations/20260712205859_accepted_match_signal.sql").text()
     ).toLowerCase();
+    const clickFunction = sql.split("create or replace function public.verify_product_click")[1];
 
-    expect(sql).not.toContain("classification_confidence");
-    expect(sql).not.toContain("brand_confidence");
-    expect(sql).not.toContain("confidence >=");
+    expect(clickFunction).toContain("return query select false, false, false");
+    expect(clickFunction).not.toContain("update public.products");
+    expect(clickFunction).not.toContain("update public.searches");
+    expect(clickFunction).not.toContain("verification_status = 'verified'");
+    expect(clickFunction).not.toContain("authenticity_status");
+    expect(clickFunction).not.toContain("classification_");
+    expect(clickFunction).not.toContain("cache_status = 'verified'");
   });
 });

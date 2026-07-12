@@ -14,6 +14,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as ApiScanCorrectionRouteImport } from './routes/api/scan-correction'
 import { Route as ApiProductSearchRouteImport } from './routes/api/product-search'
 import { Route as ApiProductClickRouteImport } from './routes/api/product-click'
+import { Route as ApiProductAcceptRouteImport } from './routes/api/product-accept'
 import { Route as ApiPersonalizationRouteImport } from './routes/api/personalization'
 import { Route as ApiFashionScanRouteImport } from './routes/api/fashion-scan'
 
@@ -42,6 +43,11 @@ const ApiProductClickRoute = ApiProductClickRouteImport.update({
   path: '/api/product-click',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiProductAcceptRoute = ApiProductAcceptRouteImport.update({
+  id: '/api/product-accept',
+  path: '/api/product-accept',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPersonalizationRoute = ApiPersonalizationRouteImport.update({
   id: '/api/personalization',
   path: '/api/personalization',
@@ -58,6 +64,7 @@ export interface FileRoutesByFullPath {
   '/privacy': typeof PrivacyRoute
   '/api/fashion-scan': typeof ApiFashionScanRoute
   '/api/personalization': typeof ApiPersonalizationRoute
+  '/api/product-accept': typeof ApiProductAcceptRoute
   '/api/product-click': typeof ApiProductClickRoute
   '/api/product-search': typeof ApiProductSearchRoute
   '/api/scan-correction': typeof ApiScanCorrectionRoute
@@ -67,6 +74,7 @@ export interface FileRoutesByTo {
   '/privacy': typeof PrivacyRoute
   '/api/fashion-scan': typeof ApiFashionScanRoute
   '/api/personalization': typeof ApiPersonalizationRoute
+  '/api/product-accept': typeof ApiProductAcceptRoute
   '/api/product-click': typeof ApiProductClickRoute
   '/api/product-search': typeof ApiProductSearchRoute
   '/api/scan-correction': typeof ApiScanCorrectionRoute
@@ -77,6 +85,7 @@ export interface FileRoutesById {
   '/privacy': typeof PrivacyRoute
   '/api/fashion-scan': typeof ApiFashionScanRoute
   '/api/personalization': typeof ApiPersonalizationRoute
+  '/api/product-accept': typeof ApiProductAcceptRoute
   '/api/product-click': typeof ApiProductClickRoute
   '/api/product-search': typeof ApiProductSearchRoute
   '/api/scan-correction': typeof ApiScanCorrectionRoute
@@ -88,6 +97,7 @@ export interface FileRouteTypes {
     | '/privacy'
     | '/api/fashion-scan'
     | '/api/personalization'
+    | '/api/product-accept'
     | '/api/product-click'
     | '/api/product-search'
     | '/api/scan-correction'
@@ -97,6 +107,7 @@ export interface FileRouteTypes {
     | '/privacy'
     | '/api/fashion-scan'
     | '/api/personalization'
+    | '/api/product-accept'
     | '/api/product-click'
     | '/api/product-search'
     | '/api/scan-correction'
@@ -106,6 +117,7 @@ export interface FileRouteTypes {
     | '/privacy'
     | '/api/fashion-scan'
     | '/api/personalization'
+    | '/api/product-accept'
     | '/api/product-click'
     | '/api/product-search'
     | '/api/scan-correction'
@@ -116,6 +128,7 @@ export interface RootRouteChildren {
   PrivacyRoute: typeof PrivacyRoute
   ApiFashionScanRoute: typeof ApiFashionScanRoute
   ApiPersonalizationRoute: typeof ApiPersonalizationRoute
+  ApiProductAcceptRoute: typeof ApiProductAcceptRoute
   ApiProductClickRoute: typeof ApiProductClickRoute
   ApiProductSearchRoute: typeof ApiProductSearchRoute
   ApiScanCorrectionRoute: typeof ApiScanCorrectionRoute
@@ -123,18 +136,18 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/privacy': {
       id: '/privacy'
       path: '/privacy'
       fullPath: '/privacy'
       preLoaderRoute: typeof PrivacyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/scan-correction': {
@@ -156,6 +169,13 @@ declare module '@tanstack/react-router' {
       path: '/api/product-click'
       fullPath: '/api/product-click'
       preLoaderRoute: typeof ApiProductClickRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/product-accept': {
+      id: '/api/product-accept'
+      path: '/api/product-accept'
+      fullPath: '/api/product-accept'
+      preLoaderRoute: typeof ApiProductAcceptRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/personalization': {
@@ -180,6 +200,7 @@ const rootRouteChildren: RootRouteChildren = {
   PrivacyRoute: PrivacyRoute,
   ApiFashionScanRoute: ApiFashionScanRoute,
   ApiPersonalizationRoute: ApiPersonalizationRoute,
+  ApiProductAcceptRoute: ApiProductAcceptRoute,
   ApiProductClickRoute: ApiProductClickRoute,
   ApiProductSearchRoute: ApiProductSearchRoute,
   ApiScanCorrectionRoute: ApiScanCorrectionRoute,
