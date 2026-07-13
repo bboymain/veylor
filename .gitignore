@@ -30,6 +30,11 @@ benchmarks/fashion-scan/private-benchmarks/
 benchmarks/fashion-scan/results/
 benchmarks/fashion-scan/manifest.local.json
 
+# Private visual item-memory benchmark data and output (Stage 2A)
+benchmarks/visual-item-memory/results/
+benchmarks/visual-item-memory/private-images/
+benchmarks/visual-item-memory/manifest.local.json
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
