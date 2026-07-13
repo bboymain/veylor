@@ -12,7 +12,8 @@
     "test": "bun test",
     "lint": "eslint .",
     "format": "prettier --write .",
-    "benchmark:validate": "bun benchmarks/fashion-scan/run.ts --validate benchmarks/fashion-scan/manifest.example.json"
+    "benchmark:validate": "bun benchmarks/fashion-scan/run.ts --validate benchmarks/fashion-scan/manifest.example.json",
+    "visual-memory-benchmark": "bun scripts/visual-memory-benchmark.ts"
   },
   "dependencies": {
     "@google/genai": "^2.10.0",

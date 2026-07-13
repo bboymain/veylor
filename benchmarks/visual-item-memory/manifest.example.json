@@ -1,0 +1,289 @@
+{
+  "name": "visual-item-memory-example",
+  "version": 1,
+  "description": "Metadata-only example dataset for the private visual item-memory feasibility benchmark. Every image is an authored mock latent signature (no real photos, no files); similarity structure is controlled exactly so harness metrics can be exercised and verified deterministically. Synthetic signatures are NOT equivalent to real different-user photos.",
+  "cases": [
+    {
+      "id": "jacket-a-different-photo",
+      "condition": "different_photo",
+      "category": "jacket",
+      "brand": "veylor-lab",
+      "productId": "sku-jacket-a",
+      "source": "authored synthetic latent fixture (metadata-only, no imagery)",
+      "privacy": "metadata_only",
+      "queryImage": { "mockSignature": [1, 0.05, 0.02, 0.01] },
+      "candidates": [
+        {
+          "id": "same-item-second-photo",
+          "image": { "mockSignature": [0.97, 0.12, 0.05, 0.02], "synthetic": true },
+          "expectedRelationship": "same_item",
+          "brand": "veylor-lab",
+          "productId": "sku-jacket-a"
+        },
+        {
+          "id": "colorway-variant",
+          "image": { "mockSignature": [0.8, 0.55, 0.1, 0.05], "synthetic": true },
+          "expectedRelationship": "visually_similar_but_different",
+          "brand": "veylor-lab",
+          "productId": "sku-jacket-a-red"
+        },
+        {
+          "id": "unrelated-handbag",
+          "image": { "mockSignature": [0.02, 0.05, 0.1, 1], "synthetic": true },
+          "expectedRelationship": "different_item"
+        }
+      ]
+    },
+    {
+      "id": "jacket-a-different-angle",
+      "condition": "different_angle",
+      "category": "jacket",
+      "brand": "veylor-lab",
+      "productId": "sku-jacket-a",
+      "source": "authored synthetic latent fixture (metadata-only, no imagery)",
+      "privacy": "metadata_only",
+      "queryImage": { "mockSignature": [1, 0.05, 0.02, 0.01] },
+      "candidates": [
+        {
+          "id": "same-item-side-angle",
+          "image": { "mockSignature": [0.95, 0.2, 0.08, 0.03], "synthetic": true },
+          "expectedRelationship": "same_item",
+          "productId": "sku-jacket-a"
+        },
+        {
+          "id": "lookalike-jacket",
+          "image": { "mockSignature": [0.75, 0.6, 0.2, 0.1], "synthetic": true },
+          "expectedRelationship": "visually_similar_but_different"
+        },
+        {
+          "id": "unrelated-shoe",
+          "image": { "mockSignature": [0.05, 0.02, 1, 0.1], "synthetic": true },
+          "expectedRelationship": "different_item"
+        }
+      ]
+    },
+    {
+      "id": "jacket-a-different-crop",
+      "condition": "different_crop",
+      "category": "jacket",
+      "brand": "veylor-lab",
+      "productId": "sku-jacket-a",
+      "source": "authored synthetic latent fixture (metadata-only, no imagery)",
+      "privacy": "metadata_only",
+      "queryImage": { "mockSignature": [1, 0.05, 0.02, 0.01] },
+      "candidates": [
+        {
+          "id": "same-item-tight-crop",
+          "image": { "mockSignature": [0.96, 0.1, 0.15, 0.02], "synthetic": true },
+          "expectedRelationship": "same_item",
+          "productId": "sku-jacket-a"
+        },
+        {
+          "id": "same-brand-other-model",
+          "image": { "mockSignature": [0.6, 0.65, 0.4, 0.2], "synthetic": true },
+          "expectedRelationship": "different_item",
+          "brand": "veylor-lab",
+          "productId": "sku-jacket-b"
+        }
+      ]
+    },
+    {
+      "id": "jacket-a-lighting-background",
+      "condition": "different_lighting_background",
+      "category": "jacket",
+      "brand": "veylor-lab",
+      "productId": "sku-jacket-a",
+      "source": "authored synthetic latent fixture (metadata-only, no imagery)",
+      "privacy": "metadata_only",
+      "queryImage": { "mockSignature": [1, 0.05, 0.02, 0.01] },
+      "candidates": [
+        {
+          "id": "same-item-dim-light",
+          "image": { "mockSignature": [0.94, 0.18, 0.1, 0.08], "synthetic": true },
+          "expectedRelationship": "same_item",
+          "productId": "sku-jacket-a"
+        },
+        {
+          "id": "colorway-outdoors",
+          "image": { "mockSignature": [0.78, 0.58, 0.12, 0.06], "synthetic": true },
+          "expectedRelationship": "visually_similar_but_different"
+        },
+        {
+          "id": "unrelated-bag",
+          "image": { "mockSignature": [0.03, 0.08, 0.15, 0.98], "synthetic": true },
+          "expectedRelationship": "different_item"
+        }
+      ]
+    },
+    {
+      "id": "jacket-a-colorway",
+      "condition": "different_colorway",
+      "category": "jacket",
+      "brand": "veylor-lab",
+      "productId": "sku-jacket-a",
+      "notes": "The colorway must not outrank the true same-item candidate.",
+      "source": "authored synthetic latent fixture (metadata-only, no imagery)",
+      "privacy": "metadata_only",
+      "queryImage": { "mockSignature": [1, 0.05, 0.02, 0.01] },
+      "candidates": [
+        {
+          "id": "red-colorway",
+          "image": { "mockSignature": [0.8, 0.55, 0.1, 0.05], "synthetic": true },
+          "expectedRelationship": "visually_similar_but_different",
+          "productId": "sku-jacket-a-red"
+        },
+        {
+          "id": "same-item-reshoot",
+          "image": { "mockSignature": [0.97, 0.12, 0.05, 0.02], "synthetic": true },
+          "expectedRelationship": "same_item",
+          "productId": "sku-jacket-a"
+        }
+      ]
+    },
+    {
+      "id": "sneaker-b-lookalike",
+      "condition": "lookalike_product",
+      "category": "sneaker",
+      "brand": "veylor-lab",
+      "productId": "sku-sneaker-b",
+      "source": "authored synthetic latent fixture (metadata-only, no imagery)",
+      "privacy": "metadata_only",
+      "queryImage": { "mockSignature": [0.05, 1, 0.03, 0.02] },
+      "candidates": [
+        {
+          "id": "same-item-reshoot",
+          "image": { "mockSignature": [0.12, 0.97, 0.08, 0.05], "synthetic": true },
+          "expectedRelationship": "same_item",
+          "productId": "sku-sneaker-b"
+        },
+        {
+          "id": "lookalike-competitor",
+          "image": { "mockSignature": [0.45, 0.82, 0.2, 0.15], "synthetic": true },
+          "expectedRelationship": "visually_similar_but_different"
+        },
+        {
+          "id": "unrelated-jacket",
+          "image": { "mockSignature": [1, 0.03, 0.05, 0.02], "synthetic": true },
+          "expectedRelationship": "different_item"
+        }
+      ]
+    },
+    {
+      "id": "sneaker-b-same-brand-model",
+      "condition": "same_brand_different_model",
+      "category": "sneaker",
+      "brand": "veylor-lab",
+      "productId": "sku-sneaker-b",
+      "source": "authored synthetic latent fixture (metadata-only, no imagery)",
+      "privacy": "metadata_only",
+      "queryImage": { "mockSignature": [0.05, 1, 0.03, 0.02] },
+      "candidates": [
+        {
+          "id": "same-item-catalog",
+          "image": { "mockSignature": [0.1, 0.96, 0.1, 0.06], "synthetic": true },
+          "expectedRelationship": "same_item",
+          "productId": "sku-sneaker-b"
+        },
+        {
+          "id": "same-brand-newer-model",
+          "image": { "mockSignature": [0.3, 0.7, 0.5, 0.3], "synthetic": true },
+          "expectedRelationship": "different_item",
+          "brand": "veylor-lab",
+          "productId": "sku-sneaker-c"
+        }
+      ]
+    },
+    {
+      "id": "sneaker-b-different-photo",
+      "condition": "different_photo",
+      "category": "sneaker",
+      "brand": "veylor-lab",
+      "productId": "sku-sneaker-b",
+      "source": "authored synthetic latent fixture (metadata-only, no imagery)",
+      "privacy": "metadata_only",
+      "queryImage": { "mockSignature": [0.05, 1, 0.03, 0.02] },
+      "candidates": [
+        {
+          "id": "same-item-user-photo",
+          "image": { "mockSignature": [0.08, 0.98, 0.06, 0.04], "synthetic": true },
+          "expectedRelationship": "same_item",
+          "productId": "sku-sneaker-b"
+        },
+        {
+          "id": "similar-silhouette",
+          "image": { "mockSignature": [0.4, 0.85, 0.18, 0.12], "synthetic": true },
+          "expectedRelationship": "visually_similar_but_different"
+        }
+      ]
+    },
+    {
+      "id": "handbag-c-unrelated",
+      "condition": "unrelated",
+      "category": "handbag",
+      "brand": null,
+      "productId": "sku-handbag-c",
+      "notes": "No same-item candidate exists; everything must stay far away.",
+      "source": "authored synthetic latent fixture (metadata-only, no imagery)",
+      "privacy": "metadata_only",
+      "queryImage": { "mockSignature": [0.03, 0.04, 1, 0.05] },
+      "candidates": [
+        {
+          "id": "unrelated-jacket-a",
+          "image": { "mockSignature": [1, 0.05, 0.02, 0.01], "synthetic": true },
+          "expectedRelationship": "different_item"
+        },
+        {
+          "id": "unrelated-sneaker-b",
+          "image": { "mockSignature": [0.05, 1, 0.03, 0.02], "synthetic": true },
+          "expectedRelationship": "different_item"
+        }
+      ]
+    },
+    {
+      "id": "handbag-c-partial-occlusion",
+      "condition": "partial_occlusion",
+      "category": "handbag",
+      "brand": null,
+      "productId": "sku-handbag-c",
+      "source": "authored synthetic latent fixture (metadata-only, no imagery)",
+      "privacy": "metadata_only",
+      "queryImage": { "mockSignature": [0.03, 0.04, 1, 0.05] },
+      "candidates": [
+        {
+          "id": "same-item-occluded",
+          "image": { "mockSignature": [0.15, 0.2, 0.85, 0.2], "synthetic": true },
+          "expectedRelationship": "same_item",
+          "productId": "sku-handbag-c"
+        },
+        {
+          "id": "similar-tote",
+          "image": { "mockSignature": [0.2, 0.15, 0.7, 0.5], "synthetic": true },
+          "expectedRelationship": "visually_similar_but_different"
+        }
+      ]
+    },
+    {
+      "id": "handbag-c-low-resolution",
+      "condition": "low_resolution",
+      "category": "handbag",
+      "brand": null,
+      "productId": "sku-handbag-c",
+      "source": "authored synthetic latent fixture (metadata-only, no imagery)",
+      "privacy": "metadata_only",
+      "queryImage": { "mockSignature": [0.03, 0.04, 1, 0.05] },
+      "candidates": [
+        {
+          "id": "same-item-compressed",
+          "image": { "mockSignature": [0.1, 0.12, 0.9, 0.15], "synthetic": true },
+          "expectedRelationship": "same_item",
+          "productId": "sku-handbag-c"
+        },
+        {
+          "id": "unrelated-jacket",
+          "image": { "mockSignature": [0.9, 0.4, 0.1, 0.05], "synthetic": true },
+          "expectedRelationship": "different_item"
+        }
+      ]
+    }
+  ]
+}
